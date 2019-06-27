@@ -8,7 +8,10 @@ from lib import filePath, contentLoader
 
 #Constants
 FILERETRACTS = 2
-ENTITIES = contentLoader.loadEntities()
+ENTITIES = contentLoader.loadEntities() # A list in the order of enemies, projectiles
+ABILITIES = contentLoader.loadAbilities()
+for ability in ABILITIES:
+    print(ability)
 
 class entity:
     def __init__(self, tag, stats, position=(0,0,0), size=30):
@@ -27,8 +30,8 @@ class entity:
         self.complexity = 10
 
         #Load Image
-        if tag == "enemy":
-            image = ENTITIES[0][stats["type"]]
+        if stats["directory"] == 0 or stats["directory"] == 1:
+            image = ENTITIES[stats["directory"]][stats["type"]]
             self.colour = image[0]
             shape = image[1]
             self.size = image[2]
@@ -47,15 +50,19 @@ class entity:
         self.loadStats()
 
     def loadStats(self):
-        if self.tag == "enemy":
+        if self.stats["directory"] == 0: # Enemy entity
             stats = ENTITIES[0][self.stats["type"]][3]
             self.maxHealth = stats[1]
             self.health = stats[1]
             self.movementSpeed = stats[0] # Metres per second
+        elif self.stats["directory"] == 1: # Bullet entity
+            self.movementSpeed = ENTITIES[1][self.stats["type"]][3] # Metres per second
         else: # Temporary data loading
             self.movementSpeed = 200
             self.maxHealth = 15
             self.health = 15
+            self.maxEnergy = 10
+            self.energy =10
 
     def moveForward(self, delta, distance=None):
         if distance == None:
@@ -71,6 +78,13 @@ class entity:
         else:
             self.angle = rotation
         self.angle %= 2*math.pi
+
+    def visualRotate(self, delta, direction, rotation=None):
+        if rotation == None:
+            self.visualAngle += direction*math.pi*delta # Rotation speed of 180 per second
+        else:
+            self.visualAngle = rotation
+        self.visualAngle %= 2*math.pi
             
     def update(self, delta, clockSignal):
         # Delta is the amount of time in seconds that has passed
@@ -107,9 +121,35 @@ class player(entity):
     def __init__(self, tag, stats, position=(0,0,0), size=30):
         super().__init__(tag, stats, position, size)
         self.items = [] # Weapons e.t.c
-        self.abilities = [] # Moves that have been learnt/unlocked
-        self.passives = [] # Abilities or effects that trigger automatically (timePassed, name)
-        self.cooldowns = [] # List that tracks the cooldowns of abilities (timePassed, cooldown, name/tag/id)
+        self.learntAbilities = [] # Moves that have been learnt/unlocked
+        self.passives = [] # A list of equipped abilities or effects that trigger automatically (timePassed, name)
+        self.cooldowns = [[0,0],[0,0],[0,0],[0,0],[0,0]] # List that tracks the cooldowns of abilities (timePassed, cooldown, name/tag/id), passives are appended on
+
+        self.basic = 0 # Holds the data of the current basic attack set (name,scaling)
+        self.abilities = [0,0,0,0] #Holds a list of the data of the equipped active abilities (name,scaling)
+
+        self.setLoadout("B","Surge")
+
+    def activateCommand(self, slot):
+        if self.cooldowns[slot][0] >= self.cooldowns[slot][1]:
+            if slot == 0:
+                self.cooldowns[slot][0] = 0
+                return ("projectile", (self.basic[0],)) # Instruction, data
+        return 0 # Response to the engine that the move currently can not be used
+
+    def setLoadout(self, slot, name):
+        moveData = 0 # Assume the ability can not be found
+        for ability in ABILITIES: # Search for the ability
+            if ability[0] == slot and ability[1] == name:
+                moveData = ability
+                break
+        if not(moveData == 0): # Only run if the ability has now been found
+            if slot == "B": # Attack command slot
+                self.basic = (name,(ability[3][0],ability[3][1]))
+                self.cooldowns[0] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
+            elif slot == "A1": # Active (Magic) slot 1
+                self.abilities[0] = (name,ability[3])
+                self.cooldowns[1] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
 
     def update(self, delta, clockSignal):
 
@@ -118,5 +158,20 @@ class player(entity):
         for ability in self.cooldowns: # Increment the cooldown timers
             if ability[0] < ability[1]:
                 ability[0] += clockSignal
+
+class projectile(entity):
+
+    def __init__(self, tag, stats, position=(0,0,0), size=30):
+        super().__init__(tag, stats, position, size)
+        self.duration = [0,4000] # Current time, Maximum time alive
+
+    def update(self, delta, clockSignal):
+        self.moveForward(delta)
+        self.visualRotate(delta, 1)
+        self.duration[0] += clockSignal
+        if self.duration[0] >= self.duration[1]:
+            return 0 # Instruction to the engine to delete the projectile
+        
+
     
 

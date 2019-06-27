@@ -725,6 +725,7 @@ class application:
                              (0, 0, 0)
                              )
         engine.addEntity("ally", {"name": "Nathan",
+                                  "directory": 10,
                                   "type": "Player"},
                          (0, 0, 0)
                          )

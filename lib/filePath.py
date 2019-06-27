@@ -30,11 +30,27 @@ def loadConfig(filePath):
         config = [x.strip() for x in config]
         dicte = "{"
         for i in range(len(config)):
-            if config[i][0] != "#": #Ignore comments
+            if config[i][0] != "#": # Ignore comments
                 dicte += config[i]+','
-        dicte = dicte[:-1]
+        dicte = dicte[:-1] # Remove the extra comma
         dicte += "}"
         config = json.loads(dicte)
         return config
     except:
-        return 0 #loading error
+        return 0 # loading error
+
+def loadList(filePath):
+    try:
+        listFile = open(filePath).readlines()
+        listFile = [x.strip() for x in listFile]
+        liste = "["
+        for i in range(len(listFile)):
+            if listFile[i][0] != "#": # Ignore comments
+                liste += listFile[i]+','
+        liste = liste[:-1] # Remove the extra comma
+        liste += "]"
+        listFile = json.loads(liste)
+        return listFile
+    except Exception as error:
+        print(error)
+        return 0 # Loading error

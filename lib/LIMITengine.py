@@ -79,6 +79,7 @@ class engine:
         self.camera.setMode(mode)
 
     def addEntity(self, tag, stats={}, position=(0,0,0), size=30):
+        # stats["directory"] = 0/1 = enemies/projectiles
         if stats["type"] == "Player":
             entity = LIMITobjects.player(tag, stats, position, size)
             self.player = entity
@@ -88,6 +89,10 @@ class engine:
         else:
             entity = LIMITobjects.entity(tag, stats, position, size)
         self.entities.append(entity)
+
+    def addProjectile(self, tag, stats={}, position=(0,0,0), size=30):
+        projectile = LIMITobjects.projectile(tag, stats, position, size)
+        self.projectiles.append(projectile)
 
     def peerGateway(self):
         while True:
@@ -126,7 +131,7 @@ class engine:
                                 entityFound = i
                     if entityFound == -1: # Add the player if it has not been found
                         print(address, "has joined as a new player.")
-                        self.addEntity("ally",{"name":"Nathan","type":"peerPlayer","address":address},(0,0,0))
+                        self.addEntity("ally",{"name":"Nathan","directory":10,"type":"peerPlayer","address":address},(0,0,0))
                         entityFound = len(self.party) - 1
 
                     x,y = packet[1][0]
@@ -173,21 +178,37 @@ class engine:
                     self.player.rotate(delta, -1)
                 elif command == "turnRight":
                     self.player.rotate(delta, 1)
+                elif command == "attack":
+                    response = self.player.activateCommand(0)
+                    if response != 0:
+                        if response[0] == "projectile": # Instruction from the player to shoot a projectile
+                            data = response[1]
+                            self.addProjectile("ally", {"name":data[0],"directory":1,"type":data[0]},(self.player.getDomain()[0][0],self.player.getDomain()[0][1],self.player.getVisualAngle()))
 
-            while len(self.peerInputs) > 0:
+            while len(self.peerInputs) > 0: # Handle input from connected users
                 command = self.peerInputs.pop()
                 slot = command[0]
                 x,y,angle = command[1]
                 self.party[slot].setLocation((x,y),angle)
 
             i = 0
-            while i < len(self.entities):
+            while i < len(self.entities): # Update every non-projectile entity
                 # signal = response from the entity to the engine
                 signal = self.entities[i].update(delta, clockSignal)
-                if signal == 0: # delete the entity
-                    self.entities[i].pop(i)
+                if signal == 0: # Delete the entity
+                    self.entities.pop(i)
                 else:
                     self.imageData.append((self.entities[i].render(),self.entities[i].getDomain()))
+                    i += 1
+
+            i = 0
+            while i < len(self.projectiles): # Update all projectile type entities
+                # signal = response from the entity to the engine
+                signal = self.projectiles[i].update(delta, clockSignal)
+                if signal == 0:  # Delete the entity
+                    self.projectiles.pop(i)
+                else:
+                    self.imageData.append((self.projectiles[i].render(), self.projectiles[i].getDomain()))
                     i += 1
 
             self.imageData = json.dumps(self.imageData) # Allows me to pass the attribute by value and not reference
@@ -293,6 +314,8 @@ class engine:
                 self.inputs.append("turnLeft")
             if keys[pygame.K_d]:
                 self.inputs.append("turnRight")
+            if keys[pygame.K_j]:
+                self.inputs.append("attack")
 
         if self.cameraMode == 0:
             if keys[pygame.K_UP]:

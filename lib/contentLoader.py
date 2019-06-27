@@ -12,13 +12,24 @@ from lib import filePath
 #Constants
 FILERETRACTS = 2
 
+fileRootPath = filePath.getRootFolder(FILERETRACTS)
+
 #Load enemy data
 def loadEnemyData():
-    fileRootPath = filePath.getRootFolder(FILERETRACTS)
     contentFolder = filePath.setPath(fileRootPath ,["data","content","enemies.txt"])
     contentData = filePath.loadConfig(contentFolder)
     return contentData
 
+def loadProjectileData():
+    contentFolder = filePath.setPath(fileRootPath ,["data","content","projectiles.txt"])
+    contentData = filePath.loadConfig(contentFolder)
+    return contentData
+
 def loadEntities():
-    entities = [loadEnemyData()]
+    entities = [loadEnemyData(),loadProjectileData()]
     return entities
+
+def loadAbilities():
+    contentFolder = filePath.setPath(fileRootPath, ["data", "content", "abilities.txt"])
+    contentData = filePath.loadList(contentFolder)
+    return contentData

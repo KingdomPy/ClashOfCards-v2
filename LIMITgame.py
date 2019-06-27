@@ -715,14 +715,17 @@ class application:
         #Passive dummies[Twilight Zone]
         for i in range (50):
             engine.addEntity("enemy", {"name":"Nathan",
+                                       "directory":0,
                                         "type":"Bandit"},
                              (0, 0, i)
                              )
         engine.addEntity("enemy", {"name":"Nathan",
-                                        "type":"Pouncer"},
+                                   "directory":0,
+                                    "type":"Pouncer"},
                              (0, 0, 0)
                              )
         engine.addEntity("ally", {"name":"Nathan",
+                                  "directory":10,
                                   "type":"Player"},
                          (0,0,0)
                          )
