@@ -1,6 +1,6 @@
 import pygame
 import math
-from lib import LIMITobjects, interface, filePath
+from lib import LIMITobjects, LIMITinterface, filePath
 import _thread, socket, json
 
 #Handles every entity
@@ -30,7 +30,6 @@ class engine:
         self.baracksAnimation = [0,0,0]
         self.pausedInstances = ("paused", "interaction", "baracks")
         self.controls = controls
-        self.selectedMove = 0
         self.path = filePath.getRootFolder(FILERETRACTS)
         self.entityGroups = {"enemy":("square","triangle","entity"), "ally":("player",), "object":("location","npc")}
         self.FPS = config["FPS"]
@@ -42,12 +41,13 @@ class engine:
         
         # Load required parts of the engine
         self.player = None
+        self.selectedCommand = 0
         self.focus = [0, 0]
         self.freeFocus = [0, 0] # The focus of the camera in free camera mode
         self.cameraSpeed = 500 # The speed of the free camera in metres per second
         self.cameraMode = 0 #0 = free camera
         self.camera = camera(surface, dimensions, debug)
-        self.hud = interface.display(surface, dimensions, debug)
+        self.hud = LIMITinterface.display(surface, dimensions, debug)
 
         # Start the network socket
         if self.debug:
@@ -147,134 +147,120 @@ class engine:
         startTime = pygame.time.get_ticks()
         
         # Check Input
-
         self.handleInput() # self.inputs store the player's inputs
 
-        if self.networkType == "Host":
-            # Check Instance
-            if self.instance == "map":
-                self.detectBulletCollisions()
-            
-            # Update Entities
-            self.imageData = []
-            self.framing = True # Fetching image data
-            delta = pygame.time.get_ticks() - startTime
-            clockSignal = max(self.deltaMin, delta)
-            delta = max(self.deltaMin, delta)/1000
-
-            while len(self.inputs) > 0: # Update the player according their inputs
-                command = self.inputs.pop()
-                if command == "up":
-                    self.freeFocus[1] -= self.cameraSpeed*delta
-                elif command == "down":
-                    self.freeFocus[1] += self.cameraSpeed*delta
-                elif command == "left":
-                    self.freeFocus[0] -= self.cameraSpeed*delta
-                elif command == "right":
-                    self.freeFocus[0] += self.cameraSpeed*delta
-                elif command == "forward":
-                    self.player.moveForward(delta)
-                elif command == "turnLeft":
-                    self.player.rotate(delta, -1)
-                elif command == "turnRight":
-                    self.player.rotate(delta, 1)
-                elif command == "attack":
-                    response = self.player.activateCommand(0)
-                    if response != 0:
-                        if response[0] == "projectile": # Instruction from the player to shoot a projectile
-                            data = response[1]
-                            self.addProjectile("ally", {"name":data[0],"directory":1,"type":data[0]},(self.player.getDomain()[0][0],self.player.getDomain()[0][1],self.player.getVisualAngle()))
-
-            while len(self.peerInputs) > 0: # Handle input from connected users
-                command = self.peerInputs.pop()
-                slot = command[0]
-                x,y,angle = command[1]
-                self.party[slot].setLocation((x,y),angle)
-
-            i = 0
-            while i < len(self.entities): # Update every non-projectile entity
-                # signal = response from the entity to the engine
-                signal = self.entities[i].update(delta, clockSignal)
-                if signal == 0: # Delete the entity
-                    self.entities.pop(i)
-                else:
-                    self.imageData.append((self.entities[i].render(),self.entities[i].getDomain()))
-                    i += 1
-
-            i = 0
-            while i < len(self.projectiles): # Update all projectile type entities
-                # signal = response from the entity to the engine
-                signal = self.projectiles[i].update(delta, clockSignal)
-                if signal == 0:  # Delete the entity
-                    self.projectiles.pop(i)
-                else:
-                    self.imageData.append((self.projectiles[i].render(), self.projectiles[i].getDomain()))
-                    i += 1
-
-            self.imageData = json.dumps(self.imageData) # Allows me to pass the attribute by value and not reference
-
-            self.framing = False  # Finished fetching the image data
-
-            if self.cameraMode == 0:
-                self.setFocus(self.freeFocus)
-            else:
-                if not (self.player == None):
-                    self.setFocus(self.player.getDomain()[0])
-
-            cameraData, minimapData = self.camera.getImage(self.focus, self.imageData)
-            self.camera.update(cameraData) # Render Entities
-
-        else:
+        if self.instance == "map": # Check if the engine is in the combat instance
             delta = pygame.time.get_ticks() - startTime
             clockSignal = max(self.deltaMin, delta)
             delta = max(self.deltaMin, delta) / 1000
 
-            while len(self.inputs) > 0: # Send input to the host
+            while len(self.inputs) > 0:  # Update the player according their inputs
                 command = self.inputs.pop()
                 if command == "up":
-                    self.freeFocus[1] -= self.cameraSpeed*delta
+                    self.freeFocus[1] -= self.cameraSpeed * delta
                 elif command == "down":
-                    self.freeFocus[1] += self.cameraSpeed*delta
+                    self.freeFocus[1] += self.cameraSpeed * delta
                 elif command == "left":
-                    self.freeFocus[0] -= self.cameraSpeed*delta
+                    self.freeFocus[0] -= self.cameraSpeed * delta
                 elif command == "right":
-                    self.freeFocus[0] += self.cameraSpeed*delta
+                    self.freeFocus[0] += self.cameraSpeed * delta
                 elif command == "forward":
                     self.player.moveForward(delta)
                 elif command == "turnLeft":
                     self.player.rotate(delta, -1)
                 elif command == "turnRight":
                     self.player.rotate(delta, 1)
+                elif command == "activateCommand":
+                    response = self.player.activateCommand(self.selectedCommand)
+                    if response != 0:
+                        if response[0] == "projectile":  # Instruction from the player to shoot a projectile
+                            data = response[1]
+                            if self.networkType == "Host":
+                                self.addProjectile("ally", {"name": data[0], "directory": 1, "type": data[0]}, (
+                                self.player.getDomain()[0][0], self.player.getDomain()[0][1], self.player.getVisualAngle()))
+                            else: # Send fire bullet command
+                                pass
 
-            if not(self.player == None): # Send the coordinates of the player
-                self.player.update(delta, clockSignal)
-                self.networkSocket.send(json.dumps(["SETPLAYER", [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
+            if self.networkType == "Host":
+                self.detectBulletCollisions()
+            
+                # Update Entities
+                self.imageData = []
+                self.framing = True # Fetching image data
 
-            if self.cameraMode == 0:
-                self.setFocus(self.freeFocus)
-                self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
-            else:
-                if not (self.player == None):
-                    self.networkSocket.send(json.dumps(["GETIMAGE", "player"]).encode())  # Request an image that follows the player
+                while len(self.peerInputs) > 0: # Handle input from connected users
+                    command = self.peerInputs.pop()
+                    slot = command[0]
+                    x,y,angle = command[1]
+                    self.party[slot].setLocation((x,y),angle)
+
+                i = 0
+                while i < len(self.entities): # Update every non-projectile entity
+                    # signal = response from the entity to the engine
+                    signal = self.entities[i].update(delta, clockSignal)
+                    if signal == 0: # Delete the entity
+                        self.entities.pop(i)
+                    else:
+                        self.imageData.append((self.entities[i].render(),self.entities[i].getDomain()))
+                        i += 1
+
+                i = 0
+                while i < len(self.projectiles): # Update all projectile type entities
+                    # signal = response from the entity to the engine
+                    signal = self.projectiles[i].update(delta, clockSignal)
+                    if signal == 0:  # Delete the entity
+                        self.projectiles.pop(i)
+                    else:
+                        self.imageData.append((self.projectiles[i].render(), self.projectiles[i].getDomain()))
+                        i += 1
+
+                self.imageData = json.dumps(self.imageData) # Allows me to pass the attribute by value and not reference
+
+                self.framing = False  # Finished fetching the image data
+
+                if self.cameraMode == 0:
+                    self.setFocus(self.freeFocus)
                 else:
-                    self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
+                    if not (self.player == None):
+                        self.setFocus(self.player.getDomain()[0])
 
-            packet = self.networkSocket.recv(32768)
-            packet = packet.decode()
-            try: # Attempt to render the image, if it fails use the previous frame
-                packet = json.loads(packet)
-                cameraData, minimapData = packet[0], packet[1]  # Split the packet up
+                cameraData, minimapData = self.camera.getImage(self.focus, self.imageData)
                 self.camera.update(cameraData) # Render Entities
-                self.frameSkipped = cameraData
-            except Exception as error:
-                print(error)
-                self.camera.update(self.frameSkipped)
+
+            else:
+                if not(self.player == None): # Send the coordinates of the player
+                    self.player.update(delta, clockSignal)
+                    self.networkSocket.send(json.dumps(["SETPLAYER", [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
+
+                if self.cameraMode == 0:
+                    self.setFocus(self.freeFocus)
+                    self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
+                else:
+                    if not (self.player == None):
+                        self.networkSocket.send(json.dumps(["GETIMAGE", "player"]).encode())  # Request an image that follows the player
+                    else:
+                        self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
+
+                packet = self.networkSocket.recv(32768)
+                packet = packet.decode()
+                try: # Attempt to render the image, if it fails use the previous frame
+                    packet = json.loads(packet)
+                    cameraData, minimapData = packet[0], packet[1]  # Split the packet up
+                    self.camera.update(cameraData) # Render Entities
+                    self.frameSkipped = cameraData
+                except Exception as error:
+                    print(error)
+                    self.camera.update(self.frameSkipped)
+
+            # Update the hud
+            self.hud.update(["Attack","Magic","Items","Upgrade"],[(0,0),(0,0),(0,0),(0,0),(0,0)],self.selectedCommand)
         
         # Display The Fps
-        fpsDisplay = self.mainFont.render("FPS:"+str(self.currentFPS), True, (20,20,20))
-        location = fpsDisplay.get_rect()
-        location.topright = self.surface.get_rect().topright
-        self.surface.blit(fpsDisplay,location)
+        if self.debug:
+            fpsDisplay = self.mainFont.render("FPS:"+str(self.currentFPS), True, (20,20,20))
+            location = fpsDisplay.get_rect()
+            location.topleft = self.surface.get_rect().topleft
+            self.surface.blit(fpsDisplay,location)
         pygame.display.flip()
         
         # End The Clock
@@ -304,6 +290,12 @@ class engine:
                         self.setCameraMode(0)
                     else:
                         self.setCameraMode(1)
+                if event.key == pygame.K_q:
+                    self.selectedCommand -= 1
+                    self.selectedCommand %= 4
+                if event.key == pygame.K_e:
+                    self.selectedCommand += 1
+                    self.selectedCommand %= 4
                         
         keys = pygame.key.get_pressed()
 
@@ -315,7 +307,7 @@ class engine:
             if keys[pygame.K_d]:
                 self.inputs.append("turnRight")
             if keys[pygame.K_j]:
-                self.inputs.append("attack")
+                self.inputs.append("activateCommand")
 
         if self.cameraMode == 0:
             if keys[pygame.K_UP]:

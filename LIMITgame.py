@@ -31,7 +31,7 @@ class application:
             pygame.mixer.Sound(filePath.setPath(self.path,["assets","sounds","system sound effects","select.wav"])),
         ]
 
-        menuMusic = pygame.mixer.music.load(filePath.setPath(self.path,["assets","sounds","music","kh3-Dearly Beloved.mp3"]))
+        menuMusic = pygame.mixer.music.load(filePath.setPath(self.path,["assets","sounds","music","kh3-Dearly Beloved.wav"]))
         pygame.mixer.music.play(-1)
         
         icon = pygame.image.load(filePath.setPath(self.path,["assets","title screen","icon.png"]))

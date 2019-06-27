@@ -48,13 +48,12 @@ class display:
         else:
             self.colour = (0,0,0)
 
-    def renderCMenu(self, commands=[], cooldowns=[], selected=1):
-        x = 30
-        y = self.length - 180
+    def renderCMenu(self, commands=[], cooldowns=[], selected=0):
+        x = 0
+        y = self.length - 150
         
         #Load sprites
         "Command title"
-        self.surface.blit(self.hud, (x, y-31))
         text = self.font2.render("COMMAND", True, (220,80,130))
         sprite = pygame.Rect(x+14, y-24, 119, 29)
         location = text.get_rect()
@@ -62,72 +61,25 @@ class display:
         self.surface.blit(text, location)
         for i in range (0, 4):
             if i != selected:
-                if not self.debug:
-                    self.surface.blit(self.frame, (x, y+36*i))
-                else:
-                    self.surface.blit(self.commandOption, (x, y+36*i))
-        if selected == 0 and commands[0] == "Attack":
-            image = self.frame_shoot
-        else:
-            image = self.frame_selected
-        if not self.debug:
-            self.surface.blit(image, (x+12, y+36*selected))
-        else:
-            self.surface.blit(self.commandOption2, (x+12, y+36*selected))
+                self.surface.blit(self.frame, (x, y+34*i))
+        image = self.frame_selected
+        self.surface.blit(image, (x, y+34*selected))
         
         #Load text and cooldowns
         for i in range(len(commands)):
             if i < 4:
                 if i != selected:
-                    sprite = pygame.Rect(x+25, y+36*i+13, 119, 29)
+                    sprite = pygame.Rect(x+25, y+34*i+13, 119, 29)
                     colour = (170,170,170)
-                    cooldownSprite = pygame.Rect(x, y+36*i, 144, 42)
+                    cooldownSprite = pygame.Rect(x, y+34*i, 144, 42)
                 else:
-                    sprite = pygame.Rect(x+37, y+36*i+13, 119, 29)
+                    sprite = pygame.Rect(x+37, y+34*i+13, 119, 29)
                     colour = (255,255,255)
-                    cooldownSprite = pygame.Rect(x+12, y+36*i, 144, 42)
+                    cooldownSprite = pygame.Rect(x+12, y+34*i, 144, 42)
                 text = self.font.render(commands[i], True, colour)
                 location = text.get_rect()
                 location.topleft = sprite.topleft
                 self.surface.blit(text, location)
-
-                #Find its cooldown
-                found = False
-                for j in range(len(cooldowns)):
-                    if commands[i] == cooldowns[j][2]:
-                        found = True
-                        if commands[0] != "Attack": #If not in first menu
-                            cdSlot = i + 1
-                        else:
-                            cdSlot = i
-                if found:
-                    if (cooldowns[cdSlot][0] < cooldowns[cdSlot][1]):
-                        transparentSurface = pygame.Surface((cooldownSprite[2],cooldownSprite[3]), pygame.SRCALPHA)
-                        length = 138*cooldowns[cdSlot][0]/cooldowns[cdSlot][1]
-                        points = [(4,20),
-                                    (4,38),
-                                    (4+length,38),
-                                    (4+length,4+max(0,20-length*1.4)),
-                                    (4+min(length,13),4+max(0,20-length*1.4))
-                                ]
-                        location = cooldownSprite.topleft
-                        pygame.draw.polygon(transparentSurface, (66,167,244,80), points) #Mana blue 
-                        self.surface.blit(transparentSurface, location)
-
-            else:
-                if commands[i] != "":
-                    if cooldowns[i][0] < cooldowns[i][1]:
-                        colour = (200,200,200)
-                    else:
-                        colour = (255,255,255)
-                    text = self.font.render(commands[i], True, colour)
-                    location = text.get_rect()
-                    frameRect = pygame.Rect(0,0,location[2]+16,location[3]+9)
-                    frameRect.bottomright = (self.width-20, self.length-88)
-                    location.center = frameRect.center
-                    pygame.draw.rect(self.surface, (0,20,0), frameRect)
-                    pygame.draw.rect(self.surface, (30,140,30), frameRect, 4)
-                    self.surface.blit(text, location)
                 
     def renderHud(self, miniMapData, hudData):
         #Interact box
@@ -227,7 +179,7 @@ class display:
                   (self.width-20,self.length-83), (self.width-20,self.length-73), (self.width-190,self.length-73))]
         return points, colour
         
-    def update(self, commands=[], cooldowns=[], selected=1, miniMapData=[], hudData=(100,100)): #hudData = hp and mp
+    def update(self, commands=[], cooldowns=[], selected=0, miniMapData=[], hudData=(100,100)): #hudData = hp and mp
         self.renderCMenu(commands, cooldowns, selected)
-        self.renderHud(miniMapData, hudData)
+        #self.renderHud(miniMapData, hudData)
         

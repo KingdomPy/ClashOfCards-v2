@@ -129,6 +129,10 @@ class player(entity):
         self.abilities = [0,0,0,0] #Holds a list of the data of the equipped active abilities (name,scaling)
 
         self.setLoadout("B","Surge")
+        self.setLoadout("A", "Missile", 1)
+        self.setLoadout("A", "Missile", 2)
+        self.setLoadout("A", "Missile", 3)
+        self.setLoadout("A", "Missile", 4)
 
     def activateCommand(self, slot):
         if self.cooldowns[slot][0] >= self.cooldowns[slot][1]:
@@ -137,19 +141,19 @@ class player(entity):
                 return ("projectile", (self.basic[0],)) # Instruction, data
         return 0 # Response to the engine that the move currently can not be used
 
-    def setLoadout(self, slot, name):
+    def setLoadout(self, type, name, slot=1):
         moveData = 0 # Assume the ability can not be found
         for ability in ABILITIES: # Search for the ability
-            if ability[0] == slot and ability[1] == name:
+            if ability[0] == type and ability[1] == name:
                 moveData = ability
                 break
         if not(moveData == 0): # Only run if the ability has now been found
-            if slot == "B": # Attack command slot
+            if type == "B": # Attack command slot
                 self.basic = (name,(ability[3][0],ability[3][1]))
                 self.cooldowns[0] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
-            elif slot == "A1": # Active (Magic) slot 1
-                self.abilities[0] = (name,ability[3])
-                self.cooldowns[1] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
+            elif type == "A": # Active (Magic) slot 1
+                self.abilities[slot-1] = (name,ability[3])
+                self.cooldowns[slot] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
 
     def update(self, delta, clockSignal):
 
