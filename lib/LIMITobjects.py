@@ -13,6 +13,18 @@ ABILITIES = contentLoader.loadAbilities()
 for ability in ABILITIES:
     print(ability)
 
+def distanceLinePoint(line, point, range):
+    x0 = point[0]
+    y0 = point[1]
+    x1 = line[0][0]
+    y1 = line[0][1]
+    x2 = line[1][0]
+    y2 = line[1][1]
+    #Check if point is within rectangle surrounding bordering the line
+    if x0 >= min(x1,x2) and x0 <= max(x1,x2) and y0 >= min(y1,y2) and y0 <= max(y1,y2):
+        distance = abs((y2-y1)*x0-(x2-x1)*y0+x2*y1-y2*x1)/math.sqrt((y2-y1)**2+(x2-x1)**2)
+        return distance <= 4+range #The constant, 4, is the leiniency of the hitbox, range is the size of the bullet
+
 class entity:
     def __init__(self, tag, stats, position=(0,0,0), size=30):
         self.tag = tag
@@ -51,18 +63,47 @@ class entity:
 
     def loadStats(self):
         if self.stats["directory"] == 0: # Enemy entity
+            self.canBeHit = self.stats["canBeHit"]
             stats = ENTITIES[0][self.stats["type"]][3]
             self.maxHealth = stats[1]
             self.health = stats[1]
             self.movementSpeed = stats[0] # Metres per second
+
         elif self.stats["directory"] == 1: # Bullet entity
             self.movementSpeed = ENTITIES[1][self.stats["type"]][3] # Metres per second
+
         else: # Temporary data loading
+            self.canBeHit = self.stats["canBeHit"]
             self.movementSpeed = 200
             self.maxHealth = 15
             self.health = 15
             self.maxEnergy = 10
             self.energy =10
+
+    def getBulletCollision(self, bullet, damage): # bullet = ((x,y),size), damage = the damage of the bullet
+        if self.canBeHit:
+            wasKilled = False # Assume the entity survives the collision
+            currentSize = self.size
+            linesToCheck = []
+            for i in range(self.complexity): # A higher complexity results in a more accurate collision detection
+                currentSize -= self.size/self.complexity
+                entityOutline = self.render()[0]
+                for line in entityOutline:
+                    linesToCheck.append(line)
+            limit = len(linesToCheck) # The size of the list
+            for i in range(len(linesToCheck)):
+                hasCollided = distanceLinePoint((linesToCheck[i],linesToCheck[(i+1)%limit]), (bullet[0]), bullet[1])
+                if hasCollided:
+                    self.hitProcedure(damage)
+                    if self.health <= 0:
+                        wasKilled = True
+                    return True, wasKilled
+            return False
+        else:
+            return False # Instruction to state that it can't be hit
+
+    def hitProcedure(self, damage):
+        self.health -= damage
 
     def moveForward(self, delta, distance=None):
         if distance == None:
@@ -116,6 +157,9 @@ class entity:
     def getVisualAngle(self):
         return self.visualAngle
 
+    def getTag(self):
+        return self.tag
+
 class player(entity):
 
     def __init__(self, tag, stats, position=(0,0,0), size=30):
@@ -168,6 +212,10 @@ class projectile(entity):
     def __init__(self, tag, stats, position=(0,0,0), size=30):
         super().__init__(tag, stats, position, size)
         self.duration = [0,4000] # Current time, Maximum time alive
+        self.damage = 10
+
+    def hasHit(self):
+        return 0
 
     def update(self, delta, clockSignal):
         self.moveForward(delta)
@@ -175,7 +223,7 @@ class projectile(entity):
         self.duration[0] += clockSignal
         if self.duration[0] >= self.duration[1]:
             return 0 # Instruction to the engine to delete the projectile
-        
 
-    
+    def getDamage(self):
+        return self.damage
 

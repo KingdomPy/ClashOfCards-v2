@@ -3,14 +3,22 @@ import math
 from lib import LIMITobjects, LIMITinterface, filePath
 import _thread, socket, json
 
-#Handles every entity
-#Connects entities to each other
-#Controls what entities are rendered
-#Controls what data is sent to the interface
-#Controls the flow of the main game
+# Handles every entity
+# Connects entities to each other
+# Controls what entities are rendered
+# Controls what data is sent to the interface
+# Controls the flow of the main game
 
-#Constants
+# Constants
 FILERETRACTS = 2
+
+# Functions
+def distancePointPoint(point1, point2):
+    x1 = point1[0]
+    y1 = point1[1]
+    x2 = point2[0]
+    y2 = point2[1]
+    return x2 - x1, y2 - y1
 
 class engine:
     def __init__(self, surface, dimensions, controls, config, debug=False):
@@ -276,7 +284,32 @@ class engine:
         self.surface.fill((255,255,255))
 
     def detectBulletCollisions(self):
-        pass
+        i = 0
+        while i < len(self.entities):
+            entityDomain = self.entities[i].getDomain()
+            j = 0
+            while j < len(self.projectiles):
+                if self.entities[i].getTag() != self.projectiles[j].getTag(): # They can only collide if they are not the same type
+                    bulletDomain = self.projectiles[j].getDomain()
+                    distanceX, distanceY = distancePointPoint(entityDomain[0], bulletDomain[0])
+                    distance = math.sqrt(distanceX**2 + distanceY**2)
+                    if distance <= entityDomain[1]+bulletDomain[1]: # Only check for collisions if they are within the radius of each other
+                        hasCollided = self.entities[i].getBulletCollision(((distanceX,distanceY),bulletDomain[1]), self.projectiles[j].getDamage())
+                        if not(hasCollided == False):
+                            if self.projectiles[j].hasHit() == 0: # Let the projectile know it has hit something
+                                self.projectiles.pop(j)
+                            if hasCollided[1] == True: # A condition checking if the enemy has died from the hit
+                                self.entities.pop(i) # Remove the entity that had died
+                                i -= 1 # Prevent an entity from being skipped
+                                j = len(self.projectiles) # Break the loop
+                        else:
+                            j += 1
+                    else:
+                        j += 1
+                else:
+                   j += 1
+            i += 1
+
 
     def handleInput(self):
         self.inputs = []
@@ -333,13 +366,6 @@ class camera:
         self.locationFont = pygame.font.Font(filePath.setPath(self.path,["assets","fonts","Kingdom_Hearts_Font.ttf"]), 50)
         self.mainFont = pygame.font.Font(filePath.setPath(self.path,["assets","fonts","Coda-Regular.ttf"]), 30)
 
-    def distance(self, point1, point2):
-        x1 = point1[0]
-        y1 = point1[1]
-        x2 = point2[0]
-        y2 = point2[1]
-        return x2-x1, y2-y1
-
     def setFocus(self, focus):
         self.focus = focus
 
@@ -358,7 +384,7 @@ class camera:
         for entity in entities:
             image = entity[0] #Image, colour and tag
             domain = entity[1] #Coordinates and size
-            xDistance,yDistance = self.distance(focus,domain[0]) #Distance from the focus
+            xDistance,yDistance = distancePointPoint(focus,domain[0]) #Distance from the focus
             if abs(xDistance) < self.boundary[0]*4 + domain[1] and abs(yDistance) < self.boundary[1]*4 + domain[1]: #If close enough to be on the minimap
                 minimapData.append((image[2], (xDistance, yDistance), domain[1])) #Tag, distance from focus, size
                 if abs(xDistance) < self.boundary[0] + domain[1] and abs(yDistance) < self.boundary[1] + domain[1]: #If on screen
