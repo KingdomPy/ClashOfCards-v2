@@ -69,11 +69,11 @@ class display:
         for i in range(len(commands)):
             if i < 4:
                 if i != selected:
-                    sprite = pygame.Rect(x+25, y+34*i+13, 119, 29)
+                    sprite = pygame.Rect(x+25, y+34*i+10, 119, 29)
                     colour = (170,170,170)
                     cooldownSprite = pygame.Rect(x, y+34*i, 144, 42)
                 else:
-                    sprite = pygame.Rect(x+37, y+34*i+13, 119, 29)
+                    sprite = pygame.Rect(x+40, y+34*i+10, 119, 29)
                     colour = (255,255,255)
                     cooldownSprite = pygame.Rect(x+12, y+34*i, 144, 42)
                 text = self.font.render(commands[i], True, colour)
@@ -179,7 +179,7 @@ class display:
                   (self.width-20,self.length-83), (self.width-20,self.length-73), (self.width-190,self.length-73))]
         return points, colour
         
-    def update(self, commands=[], cooldowns=[], selected=0, miniMapData=[], hudData=(100,100)): #hudData = hp and mp
+    def update(self, commands=[], cooldowns=[], selected=0, miniMapData=[], hudData=((100,100),(100,100),"test")): #hudData = hp and mp
         self.renderCMenu(commands, cooldowns, selected)
-        #self.renderHud(miniMapData, hudData)
+        self.renderHud(miniMapData, hudData)
         

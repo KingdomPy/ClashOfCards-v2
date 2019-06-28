@@ -164,13 +164,17 @@ class player(entity):
 
     def __init__(self, tag, stats, position=(0,0,0), size=30):
         super().__init__(tag, stats, position, size)
-        self.items = [] # Weapons e.t.c
+        self.items = []  # Weapons, potions e.t.c
         self.learntAbilities = [] # Moves that have been learnt/unlocked
         self.passives = [] # A list of equipped abilities or effects that trigger automatically (timePassed, name)
         self.cooldowns = [[0,0],[0,0],[0,0],[0,0],[0,0]] # List that tracks the cooldowns of abilities (timePassed, cooldown, name/tag/id), passives are appended on
 
-        self.basic = 0 # Holds the data of the current basic attack set (name,scaling)
-        self.abilities = [0,0,0,0] #Holds a list of the data of the equipped active abilities (name,scaling)
+        self.basic = 0 # Holds the data of the current basic attack set (name, scaling)
+        self.abilities = [0,0,0,0] # Holds a list of the data of the equipped active abilities (name, scaling)
+        self.equippedItems = [("Potion",1),("Hi-Potion",1),("Restore",1),("Accelerator",1)] # Holds a list of the equipped items (name, amount)
+        self.upgrades = ["Enhanced","Shift","Techno",""] #  Holds a list of equipped upgrades
+
+        self.commandOptions = ("Attack","Magic","Items","Upgrade") # The options displayed in the command menu by the interface
 
         self.setLoadout("B","Surge")
         self.setLoadout("A", "Missile", 1)
@@ -179,10 +183,20 @@ class player(entity):
         self.setLoadout("A", "Missile", 4)
 
     def activateCommand(self, slot):
-        if self.cooldowns[slot][0] >= self.cooldowns[slot][1]:
-            if slot == 0:
+        if self.commandOptions[slot] == "Attack":
+            if self.cooldowns[slot][0] >= self.cooldowns[slot][1]:
                 self.cooldowns[slot][0] = 0
                 return ("projectile", (self.basic[0],)) # Instruction, data
+        elif self.commandOptions[slot] == "Magic":
+            self.commandOptions = (self.abilities[0][0], self.abilities[1][0], self.abilities[2][0], self.abilities[3][0])
+            return("selectedMove", 0)
+        elif self.commandOptions[slot] == "Items":
+            self.commandOptions = (self.equippedItems[0][0]+" *"+str(self.equippedItems[0][1]), self.equippedItems[1][0]+" *"+str(self.equippedItems[1][1]),
+                                   self.equippedItems[2][0]+" *"+str(self.equippedItems[2][1]), self.equippedItems[3][0]+" *"+str(self.equippedItems[3][1]))
+            return("selectedMove", 0)
+        elif self.commandOptions[slot] == "Upgrade":
+            self.commandOptions = self.upgrades
+            return("selectedMove", 0)
         return 0 # Response to the engine that the move currently can not be used
 
     def setLoadout(self, type, name, slot=1):
@@ -193,10 +207,10 @@ class player(entity):
                 break
         if not(moveData == 0): # Only run if the ability has now been found
             if type == "B": # Attack command slot
-                self.basic = (name,(ability[3][0],ability[3][1]))
+                self.basic = (name,(ability[3][0],ability[3][1])) # Name, (ability scalings and cooldown)
                 self.cooldowns[0] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
             elif type == "A": # Active (Magic) slot 1
-                self.abilities[slot-1] = (name,ability[3])
+                self.abilities[slot-1] = (name,ability[3]) # Name, (ability scalings and cooldown)
                 self.cooldowns[slot] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
 
     def update(self, delta, clockSignal):
@@ -206,6 +220,12 @@ class player(entity):
         for ability in self.cooldowns: # Increment the cooldown timers
             if ability[0] < ability[1]:
                 ability[0] += clockSignal
+
+    def setCommandOptions(self, options):
+        self.commandOptions = options
+
+    def getCommandOptions(self):
+        return self.commandOptions
 
 class projectile(entity):
 

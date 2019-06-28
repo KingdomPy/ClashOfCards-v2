@@ -31,7 +31,7 @@ class application:
             pygame.mixer.Sound(filePath.setPath(self.path,["assets","sounds","system sound effects","select.wav"])),
         ]
 
-        menuMusic = pygame.mixer.music.load(filePath.setPath(self.path,["assets","sounds","music","kh3-Dearly Beloved.wav"]))
+        menuMusic = pygame.mixer.music.load(filePath.setPath(self.path,["assets","sounds","music","kh3-Dearly Beloved.mp3"]))
         pygame.mixer.music.play(-1)
         
         icon = pygame.image.load(filePath.setPath(self.path,["assets","title screen","icon.png"]))
@@ -713,26 +713,25 @@ class application:
         engine = LIMITengine.engine(self.surface, self.dimensions, self.controls, config, self.debug)
 
         #Passive dummies[Twilight Zone]
-        for i in range (50):
-            engine.addEntity("enemy", {"name":"Nathan",
-                                       "directory":0,
-                                       "canBeHit":True,
-                                        "type":"Bandit"},
+        for i in range(50):
+            engine.addEntity("enemy", {"name": "Nathan",
+                                       "directory": 0,
+                                       "canBeHit": True,
+                                       "type": "Bandit"},
                              (0, 0, i)
                              )
-        engine.addEntity("enemy", {"name":"Nathan",
-                                   "directory":0,
-                                   "canBeHit": True,
-                                    "type":"Pouncer"},
-                             (0, 0, 0)
+            engine.addEntity("enemy", {"name": "Nathan",
+                                       "directory": 0,
+                                       "canBeHit": True,
+                                       "type": "Pouncer"},
+                             (0, 0, i)
                              )
-        engine.addEntity("ally", {"name":"Nathan",
-                                  "directory":10,
+        engine.addEntity("ally", {"name": "Nathan",
+                                  "directory": 10,
                                   "canBeHit": True,
-                                  "type":"Player"},
-                         (0,0,0)
+                                  "type": "Player"},
+                         (0, 0, 0)
                          )
-
 
         while True:
             arguments = engine.update()

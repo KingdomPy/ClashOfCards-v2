@@ -713,18 +713,18 @@ class application:
         engine = LIMITengine.engine(self.surface, self.dimensions, self.controls, config, self.debug)
 
         #Passive dummies[Twilight Zone]
-        for i in range (50):
+        for i in range (25):
             engine.addEntity("enemy", {"name":"Nathan",
                                        "directory":0,
                                        "canBeHit":True,
                                         "type":"Bandit"},
                              (0, 0, i)
                              )
-        engine.addEntity("enemy", {"name":"Nathan",
-                                   "directory":0,
-                                   "canBeHit": True,
-                                    "type":"Pouncer"},
-                             (0, 0, 0)
+            engine.addEntity("enemy", {"name":"Nathan",
+                                       "directory":0,
+                                       "canBeHit": True,
+                                        "type":"Pouncer"},
+                                 (0, 0, i)
                              )
         engine.addEntity("ally", {"name":"Nathan",
                                   "directory":10,

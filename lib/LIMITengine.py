@@ -43,6 +43,10 @@ class engine:
         self.FPS = config["FPS"]
         self.currentFPS = config["FPS"] # Assume it can initially run at the target FPS
         self.deltaMin = round(1000/self.FPS)
+
+        self.frameCount = 0
+        self.fpsTimer = 0
+        self.newFPS = 60
         
         # Load assets
         self.mainFont = pygame.font.Font(filePath.setPath(self.path,["assets","fonts","Coda-Regular.ttf"]), 30)
@@ -50,6 +54,7 @@ class engine:
         # Load required parts of the engine
         self.player = None
         self.selectedCommand = 0
+        self.commandMenu = [0]
         self.focus = [0, 0]
         self.freeFocus = [0, 0] # The focus of the camera in free camera mode
         self.cameraSpeed = 500 # The speed of the free camera in metres per second
@@ -75,6 +80,7 @@ class engine:
                 print("SERVER OPENED ON",self.SERVER_IP,":",self.SERVER_PORT)
             _thread.start_new_thread(self.peerGateway, ())
         else:
+            self.frameSkipped = []
             self.networkSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.networkSocket.connect((self.SERVER_IP,self.SERVER_PORT))
 
@@ -131,7 +137,7 @@ class engine:
                     cameraData, minimapData = self.camera.getImage(focus, self.imageData) # Complete the instruction
                     self.networkSocket.sendto(json.dumps((cameraData, minimapData)).encode(), address) #Send the data
 
-                if packet[0] == "SETPLAYER":
+                elif packet[0] == "SETPLAYER":
                     entityFound = -1
                     for i in range(len(self.party)): # See if a player exists
                         if self.party[i].stats["type"] == "peerPlayer":
@@ -139,7 +145,7 @@ class engine:
                                 entityFound = i
                     if entityFound == -1: # Add the player if it has not been found
                         print(address, "has joined as a new player.")
-                        self.addEntity("ally",{"name":"Nathan","directory":10,"type":"peerPlayer","address":address},(0,0,0))
+                        self.addEntity("ally",{"name":"Nathan","directory":10,"type":"peerPlayer","canBeHit":True,"address":address},(0,0,0))
                         entityFound = len(self.party) - 1
 
                     x,y = packet[1][0]
@@ -188,6 +194,14 @@ class engine:
                                 self.player.getDomain()[0][0], self.player.getDomain()[0][1], self.player.getVisualAngle()))
                             else: # Send fire bullet command
                                 pass
+
+                        elif response[0] == "selectedMove":
+                            self.commandMenu.append(self.selectedCommand)
+                            self.selectedCommand = response[1]
+                elif command == "returnCommand":
+                    if len(self.commandMenu) > 1:
+                        self.selectedCommand = self.commandMenu.pop()
+                        self.player.setCommandOptions(("Attack","Magic","Items","Upgrade"))
 
             if self.networkType == "Host":
                 self.detectBulletCollisions()
@@ -239,7 +253,6 @@ class engine:
                 if not(self.player == None): # Send the coordinates of the player
                     self.player.update(delta, clockSignal)
                     self.networkSocket.send(json.dumps(["SETPLAYER", [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
-
                 if self.cameraMode == 0:
                     self.setFocus(self.freeFocus)
                     self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
@@ -257,18 +270,23 @@ class engine:
                     self.camera.update(cameraData) # Render Entities
                     self.frameSkipped = cameraData
                 except Exception as error:
-                    print(error)
                     self.camera.update(self.frameSkipped)
 
             # Update the hud
-            self.hud.update(["Attack","Magic","Items","Upgrade"],[(0,0),(0,0),(0,0),(0,0),(0,0)],self.selectedCommand)
+            if not(self.player == None):
+                self.hud.update(self.player.getCommandOptions(),[(0,0),(0,0),(0,0),(0,0),(0,0)],self.selectedCommand)
         
         # Display The Fps
-        if self.debug:
-            fpsDisplay = self.mainFont.render("FPS:"+str(self.currentFPS), True, (20,20,20))
-            location = fpsDisplay.get_rect()
-            location.topleft = self.surface.get_rect().topleft
-            self.surface.blit(fpsDisplay,location)
+        fpsDisplay = self.mainFont.render("FPS:"+str(self.currentFPS), True, (20,20,20))
+        location = fpsDisplay.get_rect()
+        location.topleft = self.surface.get_rect().topleft
+        self.surface.blit(fpsDisplay,location)
+
+        fpsDisplay = self.mainFont.render("FPS:" + str(self.newFPS), True, (20, 20, 20))
+        location = fpsDisplay.get_rect()
+        location.topright = self.surface.get_rect().topright
+        self.surface.blit(fpsDisplay, location)
+
         pygame.display.flip()
         
         # End The Clock
@@ -277,7 +295,16 @@ class engine:
             self.currentFPS = min(self.FPS,round(1000/timeElapsed))
         else:
             self.currentFPS = self.FPS
-        
+
+
+        self.fpsTimer += timeElapsed
+        if self.fpsTimer > 1000:
+            self.newFPS = self.frameCount
+            self.frameCount = 0
+            self.fpsTimer = 0
+        else:
+            self.frameCount += 1
+
         # Pause The Engine
         pygame.time.delay(max(self.deltaMin-timeElapsed,0))
         # Clear The Screen
@@ -329,6 +356,10 @@ class engine:
                 if event.key == pygame.K_e:
                     self.selectedCommand += 1
                     self.selectedCommand %= 4
+                if event.key == pygame.K_j:
+                    self.inputs.append("activateCommand")
+                if event.key == pygame.K_k:
+                    self.inputs.append("returnCommand")
                         
         keys = pygame.key.get_pressed()
 
@@ -339,8 +370,6 @@ class engine:
                 self.inputs.append("turnLeft")
             if keys[pygame.K_d]:
                 self.inputs.append("turnRight")
-            if keys[pygame.K_j]:
-                self.inputs.append("activateCommand")
 
         if self.cameraMode == 0:
             if keys[pygame.K_UP]:
