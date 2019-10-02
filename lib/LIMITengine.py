@@ -1,6 +1,6 @@
 import pygame
 import math
-from lib import LIMITobjects, LIMITinterface, filePath
+from lib import LIMITobjects, LIMITinterface, filePath, network
 import _thread, socket, json
 
 # Handles every entity
@@ -75,6 +75,7 @@ class engine:
 
         if self.networkType == "Host":
             self.networkSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.SERVER_IP = socket.gethostbyname(socket.gethostname())
             self.networkSocket.bind((self.SERVER_IP,self.SERVER_PORT))
             if self.debug:
                 print("SERVER OPENED ON",self.SERVER_IP,":",self.SERVER_PORT)
@@ -121,23 +122,23 @@ class engine:
                 packet = packet.decode() # Decode the message (bytes to str)
                 packet = json.loads(packet) # Convert the data from a string to a list
 
-                if packet[0] == "GETIMAGE":
-                    focus = packet[1]
+                if network.networkDict[packet[0]] == "GETIMAGE":
 
-                    if focus == "player": # Command to follow the player
-                        for i in range(len(self.party)):  # See if a player exists
-                            if self.party[i].stats["type"] == "peerPlayer":
-                                if self.party[i].stats["address"] == address:
-                                    entityFound = i
-                        focus = self.party[entityFound].getDomain()[0]
+                    if len(str(packet[1])) == 1:
+                        if network.networkDict[packet[1]] == "PLAYER": # Command to follow the player
+                            for i in range(len(self.party)):  # See if a player exists
+                                if self.party[i].stats["type"] == "peerPlayer":
+                                    if self.party[i].stats["address"] == address:
+                                        entityFound = i
+                            packet[1] = self.party[entityFound].getDomain()[0]
 
                     while self.framing == True: # Wait for the engine to update all the entities
                         pass
 
-                    cameraData, minimapData = self.camera.getImage(focus, self.imageData) # Complete the instruction
+                    cameraData, minimapData = self.camera.getImage(packet[1], self.imageData) # Complete the instruction
                     self.networkSocket.sendto(json.dumps((cameraData, minimapData)).encode(), address) #Send the data
 
-                elif packet[0] == "SETPLAYER":
+                elif network.networkDict[packet[0]] == "SETPLAYER":
                     entityFound = -1
                     for i in range(len(self.party)): # See if a player exists
                         if self.party[i].stats["type"] == "peerPlayer":
@@ -252,15 +253,15 @@ class engine:
             else:
                 if not(self.player == None): # Send the coordinates of the player
                     self.player.update(delta, clockSignal)
-                    self.networkSocket.send(json.dumps(["SETPLAYER", [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
+                    self.networkSocket.send(json.dumps([network.revNetworkDict["SETPLAYER"], [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
                 if self.cameraMode == 0:
                     self.setFocus(self.freeFocus)
-                    self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
+                    self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
                 else:
                     if not (self.player == None):
-                        self.networkSocket.send(json.dumps(["GETIMAGE", "player"]).encode())  # Request an image that follows the player
+                        self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], network.revNetworkDict["PLAYER"]]).encode())  # Request an image that follows the player
                     else:
-                        self.networkSocket.send(json.dumps(["GETIMAGE", self.focus]).encode())  # Request an image
+                        self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
 
                 packet = self.networkSocket.recv(32768)
                 packet = packet.decode()
@@ -268,7 +269,7 @@ class engine:
                     packet = json.loads(packet)
                     cameraData, minimapData = packet[0], packet[1]  # Split the packet up
                     self.camera.update(cameraData) # Render Entities
-                    self.frameSkipped = cameraData
+                    self.frameSkipped = cameraData # Copy Previous frame
                 except Exception as error:
                     self.camera.update(self.frameSkipped)
 
