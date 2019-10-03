@@ -46,7 +46,7 @@ class engine:
 
         self.frameCount = 0
         self.fpsTimer = 0
-        self.newFPS = 60
+        self.newFPS = config["FPS"] # Assume it can initially run at the target FPS
         
         # Load assets
         self.mainFont = pygame.font.Font(filePath.setPath(self.path,["assets","fonts","Coda-Regular.ttf"]), 30)
@@ -65,6 +65,7 @@ class engine:
         # Start the network socket
         if self.debug:
             self.networkType = "Host"
+            self.currentImage = []
         else:
             self.networkType = "Peer"
             self.lastFrame = []
@@ -132,10 +133,7 @@ class engine:
                                         entityFound = i
                             packet[1] = self.party[entityFound].getDomain()[0]
 
-                    while self.framing == True: # Wait for the engine to update all the entities
-                        pass
-
-                    cameraData, minimapData = self.camera.getImage(packet[1], self.imageData) # Complete the instruction
+                    cameraData, minimapData = self.camera.getImage(packet[1], self.currentImage) # Complete the instruction
                     self.networkSocket.sendto(json.dumps((cameraData, minimapData)).encode(), address) #Send the data
 
                 elif network.networkDict[packet[0]] == "SETPLAYER":
@@ -156,7 +154,13 @@ class engine:
             except Exception as error:
                 print(error)
                 self.networkSocket.sendto("0".encode(), address)
-        
+
+    def getClock(self, startTime):
+        delta = pygame.time.get_ticks() - startTime
+        clockSignal = max(self.deltaMin, delta)
+        delta = max(self.deltaMin, delta) / 1000
+        return delta, clockSignal
+            
     def update(self):
         # Start Clock
         startTime = pygame.time.get_ticks()
@@ -209,7 +213,6 @@ class engine:
             
                 # Update Entities
                 self.imageData = []
-                self.framing = True # Fetching image data
 
                 while len(self.peerInputs) > 0: # Handle input from connected users
                     command = self.peerInputs.pop()
@@ -238,8 +241,7 @@ class engine:
                         i += 1
 
                 self.imageData = json.dumps(self.imageData) # Allows me to pass the attribute by value and not reference
-
-                self.framing = False  # Finished fetching the image data
+                self.currentImage = self.imageData # Store a copy that is never erased but only replaced
 
                 if self.cameraMode == 0:
                     self.setFocus(self.freeFocus)
@@ -296,7 +298,6 @@ class engine:
             self.currentFPS = min(self.FPS,round(1000/timeElapsed))
         else:
             self.currentFPS = self.FPS
-
 
         self.fpsTimer += timeElapsed
         if self.fpsTimer > 1000:
