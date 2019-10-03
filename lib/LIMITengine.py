@@ -82,9 +82,11 @@ class engine:
                 print("SERVER OPENED ON",self.SERVER_IP,":",self.SERVER_PORT)
             _thread.start_new_thread(self.peerGateway, ())
         else:
+            self.currentFrame = []
             self.frameSkipped = []
             self.networkSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.networkSocket.connect((self.SERVER_IP,self.SERVER_PORT))
+            _thread.start_new_thread(self.peerConnection, ())
 
     def setFocus(self, target):
         self.focus = target
@@ -154,6 +156,33 @@ class engine:
             except Exception as error:
                 print(error)
                 self.networkSocket.sendto("0".encode(), address)
+
+    def peerConnection(self):
+        while True:
+            startTime = pygame.time.get_ticks()
+            if not(self.player == None): # Send the coordinates of the player
+                self.networkSocket.send(json.dumps([network.revNetworkDict["SETPLAYER"], [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
+            if self.cameraMode == 0:
+                self.setFocus(self.freeFocus)
+                self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
+            else:
+                if not (self.player == None):
+                    self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], network.revNetworkDict["PLAYER"]]).encode())  # Request an image that follows the player
+                else:
+                    self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
+
+            packet = self.networkSocket.recv(32768)
+            packet = packet.decode()
+            try: # Attempt to render the image, if it fails use the previous frame
+                packet = json.loads(packet)
+                cameraData, minimapData = packet[0], packet[1]  # Split the packet up
+                self.currentFrame = cameraData
+                self.frameSkipped = cameraData
+            except Exception as error:
+                self.currentFrame = self.frameSkipped
+
+            timeElapsed = pygame.time.get_ticks() - startTime
+            pygame.time.delay(max(self.deltaMin-timeElapsed,0))            
 
     def getClock(self, startTime):
         delta = pygame.time.get_ticks() - startTime
@@ -253,64 +282,48 @@ class engine:
                 self.camera.update(cameraData) # Render Entities
 
             else:
-                if not(self.player == None): # Send the coordinates of the player
-                    self.player.update(delta, clockSignal)
-                    self.networkSocket.send(json.dumps([network.revNetworkDict["SETPLAYER"], [self.player.getDomain()[0], self.player.getVisualAngle()]]).encode())
-                if self.cameraMode == 0:
-                    self.setFocus(self.freeFocus)
-                    self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
-                else:
-                    if not (self.player == None):
-                        self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], network.revNetworkDict["PLAYER"]]).encode())  # Request an image that follows the player
-                    else:
-                        self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
-
-                packet = self.networkSocket.recv(32768)
-                packet = packet.decode()
-                try: # Attempt to render the image, if it fails use the previous frame
-                    packet = json.loads(packet)
-                    cameraData, minimapData = packet[0], packet[1]  # Split the packet up
-                    self.camera.update(cameraData) # Render Entities
-                    self.frameSkipped = cameraData # Copy Previous frame
-                except Exception as error:
-                    self.camera.update(self.frameSkipped)
+                self.camera.update(self.currentFrame) # Render Entities
 
             # Update the hud
             if not(self.player == None):
                 self.hud.update(self.player.getCommandOptions(),[(0,0),(0,0),(0,0),(0,0),(0,0)],self.selectedCommand)
         
-        # Display The Fps
-        fpsDisplay = self.mainFont.render("FPS:"+str(self.currentFPS), True, (20,20,20))
-        location = fpsDisplay.get_rect()
-        location.topleft = self.surface.get_rect().topleft
-        self.surface.blit(fpsDisplay,location)
+            # Display The Fps
+            fpsDisplay = self.mainFont.render("FPS:"+str(self.currentFPS), True, (20,20,20))
+            location = fpsDisplay.get_rect()
+            location.topleft = self.surface.get_rect().topleft
+            self.surface.blit(fpsDisplay,location)
 
-        fpsDisplay = self.mainFont.render("FPS:" + str(self.newFPS), True, (20, 20, 20))
-        location = fpsDisplay.get_rect()
-        location.topright = self.surface.get_rect().topright
-        self.surface.blit(fpsDisplay, location)
+            fpsDisplay = self.mainFont.render("FPS:" + str(self.newFPS), True, (20, 20, 20))
+            location = fpsDisplay.get_rect()
+            location.topright = self.surface.get_rect().topright
+            self.surface.blit(fpsDisplay, location)
 
-        pygame.display.flip()
-        
-        # End The Clock
-        timeElapsed = pygame.time.get_ticks() - startTime
-        if timeElapsed > 0:
-            self.currentFPS = min(self.FPS,round(1000/timeElapsed))
-        else:
-            self.currentFPS = self.FPS
+            pygame.display.flip()
+            
+            # End The Clock
+            timeElapsed = pygame.time.get_ticks() - startTime
+            if timeElapsed > 0:
+                self.currentFPS = min(self.FPS,round(1000/timeElapsed))
+            else:
+                self.currentFPS = self.FPS
 
-        self.fpsTimer += timeElapsed
-        if self.fpsTimer > 1000:
-            self.newFPS = self.frameCount
-            self.frameCount = 0
-            self.fpsTimer = 0
-        else:
-            self.frameCount += 1
+            if self.networkType == "Peer":
+                delta, clockSignal = self.getClock(startTime)
+                self.player.update(delta, clockSignal)
 
-        # Pause The Engine
-        pygame.time.delay(max(self.deltaMin-timeElapsed,0))
-        # Clear The Screen
-        self.surface.fill((255,255,255))
+            self.fpsTimer += timeElapsed
+            if self.fpsTimer > 1000:
+                self.newFPS = self.frameCount
+                self.frameCount = 0
+                self.fpsTimer = 0
+            else:
+                self.frameCount += 1
+
+            # Pause The Engine
+            pygame.time.delay(max(self.deltaMin-timeElapsed,0))
+            # Clear The Screen
+            self.surface.fill((255,255,255))
 
     def detectBulletCollisions(self):
         i = 0
