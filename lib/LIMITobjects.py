@@ -11,7 +11,8 @@ FILERETRACTS = 2
 ENTITIES = contentLoader.loadEntities() # A list in the order of enemies, projectiles
 ABILITIES = contentLoader.loadAbilities()
 for ability in ABILITIES:
-    print(ability)
+    pass
+    #print(ability)
 
 def distanceLinePoint(line, point, range):
     x0 = point[0]
@@ -34,6 +35,7 @@ class entity:
         self.angle = position[2]
         self.visualAngle = self.angle
         self.size = size
+        self.type = self.stats["type"]
         self.clock = 0
         self.currentAnimation = [""]
         self.iFrame = False # immunity frame
@@ -160,10 +162,14 @@ class entity:
     def getTag(self):
         return self.tag
 
+    def getRender(self):
+        return self.type, self.x, self.y
+    
 class player(entity):
 
     def __init__(self, tag, stats, position=(0,0,0), size=30):
         super().__init__(tag, stats, position, size)
+        self.address = self.stats["address"]
         self.items = []  # Weapons, potions e.t.c
         self.learntAbilities = [] # Moves that have been learnt/unlocked
         self.passives = [] # A list of equipped abilities or effects that trigger automatically (timePassed, name)
@@ -227,6 +233,9 @@ class player(entity):
     def getCommandOptions(self):
         return self.commandOptions
 
+    def getAddress(self):
+        return self.address
+    
 class projectile(entity):
 
     def __init__(self, tag, stats, position=(0,0,0), size=30):
