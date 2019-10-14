@@ -1,6 +1,6 @@
 # ClashOfCards-v2
 Current version of clash of cards, dynamic fps and custom enemies.<br>
-+Increasing speed of multiplayer<br>
++Lower latency<br>
 +Dynamic FPS<br>
 +Greater modular design, enemies can be tweaked externally <br>
 +Engine better annotated and is faster <br><br>
