@@ -35,9 +35,9 @@ class scene:
         self.musicStarted = False
 
         self.emblems = [
-            pygame.image.load(filePath.setPath(self.path,["assets","player","emblems","vanguard.png"])),
-            pygame.image.load(filePath.setPath(self.path,["assets","player","emblems","engineer.png"])),
-            pygame.image.load(filePath.setPath(self.path,["assets","player","emblems","stealth.png"])),
+            pygame.image.load(filePath.setPath(self.path,["assets","player","emblems","vanguard.png"])).convert_alpha(),
+            pygame.image.load(filePath.setPath(self.path,["assets","player","emblems","engineer.png"])).convert_alpha(),
+            pygame.image.load(filePath.setPath(self.path,["assets","player","emblems","stealth.png"])).convert_alpha(),
         ]
 
         for i in range(len(self.emblems)): #Scale images
@@ -53,13 +53,13 @@ class scene:
         self.customCursor = 1
 
         #Start up animation
-        self.startupImage = pygame.image.load(filePath.setPath(self.path,["assets","title screen","logo.png"])).convert()
+        self.startupImage = pygame.image.load(filePath.setPath(self.path,["assets","title screen","logo.png"])).convert_alpha()
         self.startupImage = pygame.transform.scale(self.startupImage, self.dimensions)
         self.startupRect = self.startupImage.get_rect()
         self.startupRect.center = (round(self.dimensions[0]/2), round(self.dimensions[1]/2))
 
         #Title screen
-        self.background = pygame.image.load(filePath.setPath(self.path,["assets","title screen","overlay.png"]))
+        self.background = pygame.image.load(filePath.setPath(self.path,["assets","title screen","overlay.png"])).convert_alpha()
         self.background = pygame.transform.scale(self.background, self.dimensions)
         
         self.cursor = pygame.image.load(filePath.setPath(self.path,["assets","background","cursor.png"]))
@@ -102,6 +102,59 @@ class scene:
         }
         self.currentNode = "NEW GAME"
 
+        #Gradients
+        self.gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
+        optionsRect = (self.dimensions[0]*0.4, self.dimensions[1]/20) #Constant for ui sizes 
+        self.rectangleSurface = pygame.Surface(optionsRect, pygame.SRCALPHA)
+        self.squareSurface = pygame.Surface((optionsRect[1], optionsRect[1]), pygame.SRCALPHA)
+        self.highlightSurface = pygame.Surface((optionsRect[1]*0.6, optionsRect[1]*0.6), pygame.SRCALPHA)
+        self.lineSurface = pygame.Surface((self.dimensions[0]-30, 3), pygame.SRCALPHA)
+        self.uiBox = pygame.Surface((self.dimensions[0], self.dimensions[1]/3), pygame.SRCALPHA)
+        self.uiBox.fill((0,0,0,170))
+        self.saveImage = pygame.Surface((self.dimensions[0]*0.8, self.dimensions[1]*0.1), pygame.SRCALPHA)
+        self.saveImageLine = pygame.Surface((self.dimensions[0]*0.8, 3), pygame.SRCALPHA)
+
+        #draw main option pre-calculations
+        self.yCalculations = [self.dimensions[1] - 1.8*optionsRect[1], self.dimensions[1] - 3.2*optionsRect[1], self.dimensions[1] - 4.6*optionsRect[1]]
+        self.mainOptionCalculations = [
+            ((self.dimensions[0]+1-optionsRect[0], self.yCalculations[0]), (30, self.yCalculations[0]), (30+optionsRect[1]*0.2, self.yCalculations[0]+optionsRect[1]*0.2), (30, self.yCalculations[0]+optionsRect[1]-3)),
+            ((self.dimensions[0]+1-optionsRect[0], self.yCalculations[1]), (30, self.yCalculations[1]), (30+optionsRect[1]*0.2, self.yCalculations[1]+optionsRect[1]*0.2), (30, self.yCalculations[1]+optionsRect[1]-3)),
+            ((self.dimensions[0]+1-optionsRect[0], self.yCalculations[2]), (30, self.yCalculations[2]), (30+optionsRect[1]*0.2, self.yCalculations[2]+optionsRect[1]*0.2), (30, self.yCalculations[2]+optionsRect[1]-3))
+        ]
+
+        #draw ui box pre-calculations
+        self.uiBoxCalculations = [
+            (0,self.dimensions[1]/3),
+            ((0, self.dimensions[1]/3-5), (self.dimensions[0], self.dimensions[1]/3 -5)),
+            ((0, 2*self.dimensions[1]/3), (self.dimensions[0], 2*self.dimensions[1]/3)),
+            (self.dimensions[0]/2, 2*self.dimensions[1]/3 - 25),
+            (self.dimensions[0]/2, self.dimensions[1]/3 + 30),
+            self.dimensions[1]/3 - 110,
+            self.dimensions[1]/3 +70,
+            self.dimensions[0]*0.25,
+        ]
+
+        #load menu pre-calculations
+        self.loadMenuCalculations = [
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2, self.dimensions[0]*0.8, self.dimensions[1]*0.6),
+            self.dimensions[1]*0.1,
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2, self.dimensions[0]*0.8, self.dimensions[1]*0.1),
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2 +self.dimensions[1]*0.1, self.dimensions[0]*0.8, self.dimensions[1]*0.1),
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2 +self.dimensions[1]*0.2, self.dimensions[0]*0.8, self.dimensions[1]*0.1),
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2 +self.dimensions[1]*0.3, self.dimensions[0]*0.8, self.dimensions[1]*0.1),
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2 +self.dimensions[1]*0.4, self.dimensions[0]*0.8, self.dimensions[1]*0.1),
+            pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2 +self.dimensions[1]*0.5, self.dimensions[0]*0.8, self.dimensions[1]*0.1),
+        ]
+
+        self.loadMenuYCalculations = [
+            self.dimensions[1]*0.2,
+            self.dimensions[1]*0.2+self.dimensions[1]*0.1,
+            self.dimensions[1]*0.2+self.dimensions[1]*0.2,
+            self.dimensions[1]*0.2+self.dimensions[1]*0.3,
+            self.dimensions[1]*0.2+self.dimensions[1]*0.4,
+            self.dimensions[1]*0.2+self.dimensions[1]*0.5,
+        ]
+        
         self.stage = "startUp1"
         self.clock = 0
         self.closing = False
@@ -116,11 +169,10 @@ class scene:
             if self.stage == "startUp1":
                 if self.clock < 280*16*self.waitingTime: #Emulate for loop
                     i = self.clock//(16*self.waitingTime)
-                    self.surface.fill((0,0,0))
                     if i < 75: #Up till 1.5 seconds
                         self.startupImage.set_alpha(i*4+1)
-                    self.surface.blit(self.startupImage, self.startupRect)
-
+                        self.surface.blit(self.startupImage, self.startupRect)
+                    
                 else:
                     self.stage = "startUp2"
                     self.clock = 0 #Reset the clock
@@ -128,9 +180,9 @@ class scene:
             elif self.stage == "startUp2":
                 if self.clock < 60*16*self.waitingTime: #Emulate for loop
                     i = self.clock//(16*self.waitingTime)
-                    gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
-                    gradient.fill((0,0,0,i*4+1))
-                    self.surface.blit(gradient, (0,0))
+                    self.gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
+                    self.gradient.fill((0,0,0,i*4+1))
+                    self.surface.blit(self.gradient, (0,0))
 
                 else:
                     self.stage = "titleScreen transition"
@@ -143,11 +195,10 @@ class scene:
                     self.drawMainOption(3.2, (0,0), "LOAD")
                     self.drawMainOption(1.8, (0,0), "CONFIG")
 
-                    gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
-                    gradient.fill((255,255,255,249-i*3))
-                    self.surface.blit(gradient, (0,0))
-
                     self.surface.blit(self.background, (0,0))
+
+                    self.gradient.fill((255,255,255,249-i*3))
+                    self.surface.blit(self.gradient, (0,0))
                 else:
                     if self.customCursor == 1:
                         pygame.mouse.set_visible(False)
@@ -232,9 +283,8 @@ class scene:
                         self.closing = True
                     if self.clock < 30*16*self.waitingTime: #Emulate for loop
                         i = self.clock//(16*self.waitingTime)
-                        gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
-                        gradient.fill((0,0,0,i*8+1))
-                        self.surface.blit(gradient, (0,0))
+                        self.gradient.fill((0,0,0,i*8+1))
+                        self.surface.blit(self.gradient, (0,0))
                         self.drawnLoadingText = False
                     else:
                         if not self.drawnLoadingText:
@@ -313,13 +363,15 @@ class scene:
     def drawMainOption(self, y, mouse_coordinates, text="TEST"):
         optionsRect = (self.dimensions[0]*0.4, self.dimensions[1]/20) #Constant for ui sizes 
 
-        y = self.dimensions[1] - y*optionsRect[1] #Align by multiplier
-
-        #Gradient Colour Surfaces
-        rectangleSurface = pygame.Surface(optionsRect, pygame.SRCALPHA)
-        squareSurface = pygame.Surface((optionsRect[1], optionsRect[1]), pygame.SRCALPHA)
-        highlightSurface = pygame.Surface((optionsRect[1]*0.6, optionsRect[1]*0.6), pygame.SRCALPHA)
-        lineSurface = pygame.Surface((self.dimensions[0]-30, 3), pygame.SRCALPHA)
+        if y == 1.8:
+            y = self.yCalculations[0]
+            index = 0
+        elif y == 3.2:
+            y = self.yCalculations[1]
+            index = 1
+        elif y == 4.6:
+            y = self.yCalculations[2]
+            index = 2
 
         if mouse_coordinates[0] >= 30 and mouse_coordinates[1] > y and mouse_coordinates[1] < (y+optionsRect[1]): #Calculate if touching the mouse pointer
             colours = ((113,169,247,140), (0,0,0,255), (113,169,247,255)) #Rectangle, Square & Line, Hightlight #230,250,252 | 113,169,247 Colour Codes
@@ -334,15 +386,15 @@ class scene:
             if self.cursorTouching[0] == text: #clear touching if no longer touching
                 self.cursorTouching = [None]
             
-        rectangleSurface.fill(colours[0])
-        squareSurface.fill(colours[1])
-        highlightSurface.fill(colours[2])
-        lineSurface.fill(colours[1])
+        self.rectangleSurface.fill(colours[0])
+        self.squareSurface.fill(colours[1])
+        self.highlightSurface.fill(colours[2])
+        self.lineSurface.fill(colours[1])
 
-        self.surface.blit(rectangleSurface, (self.dimensions[0]+1-optionsRect[0], y))
-        self.surface.blit(squareSurface, (30, y))
-        self.surface.blit(highlightSurface, (30+optionsRect[1]*0.2, y+optionsRect[1]*0.2))
-        self.surface.blit(lineSurface, (30, y+optionsRect[1]-3))
+        self.surface.blit(self.rectangleSurface, self.mainOptionCalculations[index][0])
+        self.surface.blit(self.squareSurface, (30, y))
+        self.surface.blit(self.highlightSurface, self.mainOptionCalculations[index][2])
+        self.surface.blit(self.lineSurface, self.mainOptionCalculations[index][3])
 
         text = self.fontMain.render(text, True, textColour)
         text_rect = text.get_rect()
@@ -355,14 +407,12 @@ class scene:
             buttonScripts.append("")
 
         #Draw the ui box
-        transparentBackGround = pygame.Surface(self.dimensions, pygame.SRCALPHA)
-        transparentBackGround.fill((0,0,0,200))
-        uiBox = pygame.Surface((self.dimensions[0], self.dimensions[1]/3), pygame.SRCALPHA)
-        uiBox.fill((0,0,0,170))
-        self.surface.blit(transparentBackGround, (0,0))
-        self.surface.blit(uiBox, (0,self.dimensions[1]/3))
-        pygame.draw.line(self.surface, (168,149,229), (0, self.dimensions[1]/3-5), (self.dimensions[0], self.dimensions[1]/3 -5), 7) #Top border
-        pygame.draw.line(self.surface, (168,149,229), (0, 2*self.dimensions[1]/3), (self.dimensions[0], 2*self.dimensions[1]/3), 7) #Bottom border
+        self.gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
+        self.gradient.fill((0,0,0,200))
+        self.surface.blit(self.gradient, (0,0))
+        self.surface.blit(self.uiBox, self.uiBoxCalculations[0])
+        pygame.draw.line(self.surface, (168,149,229), self.uiBoxCalculations[1][0], self.uiBoxCalculations[1][1], 7) #Top border
+        pygame.draw.line(self.surface, (168,149,229), self.uiBoxCalculations[2][0], self.uiBoxCalculations[2][1], 7) #Bottom border
 
         #Check if touching outside the menu
         if mouse_coordinates[1] < self.dimensions[1]/3 -7 or mouse_coordinates[1] > 2*self.dimensions[1]/3 + 7:
@@ -372,10 +422,10 @@ class scene:
         title = self.fontMain.render(title, True, (240,240,240)) #Tile text
         
         textRect = text.get_rect()  #Information text box
-        textRect.center = (self.dimensions[0]/2, 2*self.dimensions[1]/3 - 25)
+        textRect.center = self.uiBoxCalculations[3]
         self.surface.blit(text, textRect) #Information text render
         titleRect = title.get_rect()
-        titleRect.center = (self.dimensions[0]/2, self.dimensions[1]/3 + 30)
+        titleRect.center = self.uiBoxCalculations[4]
         self.surface.blit(title, titleRect) #Information text render
 
         longestText = 0
@@ -387,14 +437,14 @@ class scene:
                 longestText = length
         #Set width of the button using the longest length so that all buttons are the same width
         width = longestText + 80 #40 on each side
-        boxSpace = self.dimensions[1]/3 - 110 #The vertical length of space the buttons will be placed in
+        boxSpace = self.uiBoxCalculations[5] #The vertical length of space the buttons will be placed in
         numOfOptions = len(options)
-        boxShift = (boxSpace - numOfOptions*35)/2 +self.dimensions[1]/3 +70 # Creates equal gap between title and the text
+        boxShift = (boxSpace - numOfOptions*35)/2 + self.uiBoxCalculations[6] # Creates equal gap between title and the text
         for i in range(numOfOptions):
             colours = ((10,5,25), (120,120,120)) #Box, Text colours
             
             optionBox = pygame.Rect(0,0,width,35) #x,y,width,length
-            optionBox.center = (self.dimensions[0]*0.25, i*45+boxShift)
+            optionBox.center = (self.uiBoxCalculations[6], i*45+boxShift)
 
             if optionBox.collidepoint(mouse_coordinates): #change colours if collinding with mouse
                 
@@ -478,19 +528,17 @@ class scene:
     def loadMenu(self, mouse_coordinates, access = 0):
         #access = 0 loading file mode
         #access = 1 creating new file mode
-        transparentBackGround = pygame.Surface(self.dimensions, pygame.SRCALPHA)
-        transparentBackGround.fill((6,38,5,220))
-        self.surface.blit(transparentBackGround,(0,0))
-        uiCollisionRect = pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2, self.dimensions[0]*0.8, self.dimensions[1]*0.6)
+        self.gradient = pygame.Surface(self.dimensions, pygame.SRCALPHA)
+        self.gradient.fill((6,38,5,220))
+        self.surface.blit(self.gradient,(0,0))
+        uiCollisionRect = self.loadMenuCalculations[0]
         if not(uiCollisionRect.collidepoint(mouse_coordinates)):
             self.cursorTouching = [str(access)] #close the ui
             
-        length = self.dimensions[1]*0.1 #6 = max number of saves
+        length = self.loadMenuCalculations[1] #6 = max number of saves
         
         for i in range(6):
-            saveImage = pygame.Surface((self.dimensions[0]*0.8, length), pygame.SRCALPHA)
-            saveImageLine = pygame.Surface((self.dimensions[0]*0.8, 3), pygame.SRCALPHA)
-            saveUI = pygame.Rect(self.dimensions[0]*0.1, self.dimensions[1]*0.2 +i*length, self.dimensions[0]*0.8, length)
+            saveUI = self.loadMenuCalculations[i+2]
             
             if saveUI.collidepoint(mouse_coordinates):
                 colours = ((13,76,12,200), (220,220,220,140)) #box, line
@@ -503,11 +551,11 @@ class scene:
                 if self.cursorTouching == ["SAVE", i]:
                     self.cursorTouching = [None]
                     
-            saveImage.fill(colours[0])
-            saveImageLine.fill(colours[1])
-            y = self.dimensions[1]*0.2+i*length
-            self.surface.blit(saveImage, (self.dimensions[0]*0.1, y))
-            self.surface.blit(saveImageLine, (self.dimensions[0]*0.1, y+length-3))
+            self.saveImage.fill(colours[0])
+            self.saveImageLine.fill(colours[1])
+            y = self.loadMenuYCalculations[i]
+            self.surface.blit(self.saveImage, (self.dimensions[0]*0.1, y))
+            self.surface.blit(self.saveImageLine, (self.dimensions[0]*0.1, y+length-3))
 
             #RENDER SAVE TEXT
             savedData = self.savedData[i]

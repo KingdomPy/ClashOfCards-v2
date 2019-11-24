@@ -1,5 +1,5 @@
 import pygame, os
-import main_menu, main_game
+import main_menu, main_game, optimised_menu
 from lib import filePath
 
 from twisted.internet import reactor
@@ -14,7 +14,7 @@ class gameClient:
         self.targetDeltaTime = 16 #Time between each frame in milliseconds (just over 60 FPS)
 
         pygame.init()
-        self.surface = pygame.display.set_mode(resolution)
+        self.surface = pygame.display.set_mode(resolution, pygame.SCALED)
         self.graphics = graphics.lower()
         self.debug = debug
 
@@ -46,6 +46,8 @@ class gameClient:
 
         wait = max(self.targetDeltaTime - timeElapsed, 0)/1000
         self.dt = max(self.targetDeltaTime, timeElapsed)
+        if self.dt > 16:
+            print(self.dt)
 
         reactor.callLater(wait, self.runClient)
 
