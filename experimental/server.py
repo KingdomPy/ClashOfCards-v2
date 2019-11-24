@@ -100,7 +100,7 @@ class MyServer(basic.LineReceiver):
         opCode = data.pop(0)
         if opCode == "login":
             if connectedUsers[self] == {}:
-                connectedUsers[self] = {"entityId":None, "playing":False}
+                connectedUsers[self] = {"entityId":None, "playing":False, "hasInput":False}
                 addr = self.transport.getPeer()
                 print("({}:{}) has logged in".format(addr.host, addr.port))
                 packet = json.dumps((opCodes["loginSuccess"],))
@@ -130,17 +130,20 @@ class MyServer(basic.LineReceiver):
                     client.sendLine(packet)
                   
         elif opCode == "input":
-            userId = connectedUsers[self]["entityId"]
-            entity = currentEntities.getEntity(userId)
-            for userInput in data:
-                if userInput == "upKey":
-                    entity.moveForward(dt)
-                elif userInput == "downKey":
-                    pass
-                elif userInput == "rightKey":
-                    entity.rotate(dt, 1)
-                elif userInput == "leftKey":
-                    entity.rotate(dt, -1)
+            hasInput = connectedUsers[self]["hasInput"]
+            if not hasInput:
+                userId = connectedUsers[self]["entityId"]            
+                entity = currentEntities.getEntity(userId)
+                for userInput in data:
+                    if userInput == "upKey":
+                        entity.moveForward(dt)
+                    elif userInput == "downKey":
+                        entity.fillerInput()
+                    elif userInput == "rightKey":
+                        entity.rotate(dt, 1)
+                    elif userInput == "leftKey":
+                        entity.rotate(dt, -1)
+                connectedUsers[self]["hasInput"] = True
 
     def sendData(self, data):
         self.sendLine(data)
@@ -179,6 +182,8 @@ def updateEntities():
         for client in connectedUsers:
             if connectedUsers[client]["playing"]:
                 client.sendLine(packet)
+                print(connectedUsers[client]["hasInput"])
+                connectedUsers[client]["hasInput"] = False
     reactor.callLater(1/ticksPerSecond, updateEntities)
 
 factory = MyServerFactory()

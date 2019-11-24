@@ -65,18 +65,24 @@ class scene:
 
                 for i in range(len(inputs) - 1):
                     inputs[i + 1] = client.opCodes[inputs[i + 1]]
+
                 if len(inputs) > 1:
                     self.networkProtocol.sendData(json.dumps(inputs))
 
-                for entityId in self.entities:
-                    entity = self.entities[entityId]
-                    entity.update(dt)
-                    polygon, radius = entity.getShape()
-                    x, y, angle = entity.getPosition()
-                    if graphics == "low":
+                if graphics == "low":
+                    for entityId in self.entities:
+                        entity = self.entities[entityId]
+                        entity.update(dt)
+                        polygon, radius = entity.getShape()
+                        x, y, angle = entity.getPosition()
                         pygame.draw.lines(self.surface, (0,0,0), True, polygon)
                         pygame.draw.circle(self.surface, (0,0,0), (x,y), radius, 1)
-                    else:
+                else:
+                    for entityId in self.entities:
+                        entity = self.entities[entityId]
+                        entity.update(dt)
+                        polygon, radius = entity.getShape()
+                        x, y, angle = entity.getPosition()
                         pygame.draw.aalines(self.surface, (0, 0, 0), True, polygon)
                         pygame.gfxdraw.aacircle(self.surface, round(x), round(y), radius, (0,0,0))
             else:

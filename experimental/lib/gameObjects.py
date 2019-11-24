@@ -64,6 +64,9 @@ class entity:
                 sizeIndex += 1
         return pointsToDraw, self.radius
 
+    def fillerInput(self):
+        self.updated = True
+
     def moveForward(self, delta, distance=None):
         if distance == None:
             self.x += self.movementSpeed * math.cos(self.angle) * delta
