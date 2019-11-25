@@ -1,7 +1,7 @@
 import pygame
 import math
 from lib import LIMITobjects, LIMITinterface, filePath, network
-import _thread, socket, json
+import _thread, socket, json, zlib
 
 # Handles every entity
 # Connects entities to each other
@@ -136,7 +136,9 @@ class engine:
                             packet[1] = self.party[entityFound].getDomain()[0]
 
                     cameraData, minimapData = self.camera.getImage(packet[1], self.currentImage) # Complete the instruction
-                    self.networkSocket.sendto(json.dumps((cameraData, minimapData)).encode(), address) #Send the data
+                    packet = json.dumps((cameraData, minimapData)).encode()
+                    packet = zlib.compress(packet)
+                    self.networkSocket.sendto(packet, address) #Send the data
 
                 elif network.networkDict[packet[0]] == "SETPLAYER":
                     entityFound = -1
@@ -158,6 +160,7 @@ class engine:
                 self.networkSocket.sendto("0".encode(), address)
 
     def peerConnection(self):
+        self.framing = False
         while True:
             startTime = pygame.time.get_ticks()
             if not(self.player == None): # Send the coordinates of the player
@@ -172,10 +175,13 @@ class engine:
                     self.networkSocket.send(json.dumps([network.revNetworkDict["GETIMAGE"], self.focus]).encode())  # Request an image
 
             packet = self.networkSocket.recv(32768)
+            packet = zlib.decompress(packet)
             packet = packet.decode()
             try: # Attempt to render the image, if it fails use the previous frame
                 packet = json.loads(packet)
                 cameraData, minimapData = packet[0], packet[1]  # Split the packet up
+                while self.framing:
+                    pass
                 self.currentFrame = cameraData
                 self.frameSkipped = cameraData
             except Exception as error:
@@ -282,7 +288,9 @@ class engine:
                 self.camera.update(cameraData) # Render Entities
 
             else:
+                self.framing = True
                 self.camera.update(self.currentFrame) # Render Entities
+                self.framing = False
 
             # Update the hud
             if not(self.player == None):

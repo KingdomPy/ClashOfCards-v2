@@ -63,6 +63,14 @@ class scene:
                     if keysPressed[key]:
                         inputs.append("downKey")
 
+                if len(inputs) > 1: #Remove any contradicting inputs
+                    if ("upKey" in inputs) and ("downKey" in inputs):
+                        inputs.remove("upKey")
+                        inputs.remove("downKey")
+                    elif ("rightKey" in inputs) and ("leftKey" in inputs):
+                        inputs.remove("rightKey")
+                        inputs.remove("leftKey")
+
                 for i in range(len(inputs) - 1):
                     inputs[i + 1] = client.opCodes[inputs[i + 1]]
 
@@ -82,7 +90,7 @@ class scene:
                         entity = self.entities[entityId]
                         entity.update(dt)
                         polygon, radius = entity.getShape()
-                        x, y, angle = entity.getPosition()
+                        x, y, vAngle, angle = entity.getPositionAngle()
                         pygame.draw.aalines(self.surface, (0, 0, 0), True, polygon)
                         pygame.gfxdraw.aacircle(self.surface, round(x), round(y), radius, (0,0,0))
             else:
@@ -102,14 +110,14 @@ class scene:
         self.open = False
 
     def addEntity(self, entityId, position, entityName, entityClass):
-        newEntity = gameObjects.entity(entityId, position)
-        newEntity.setType(entityName, entityClass)
+        newEntity = gameObjects.entity(entityId, entityName, entityClass)
+        newEntity.setPositionAngle(position)
         self.entities[entityId] = newEntity
-        print(entityName)
+        print(entityName, "("+entityClass+") has joined.")
 
     def removeEntity(self, entityId):
         self.entities.pop(entityId, None)
 
-    def tweenUpdate(self, entityId, position):
+    def updateState(self, entityId, state):
         if entityId in self.entities:
-            self.entities[entityId].tweenUpdate(position)
+            self.entities[entityId].updateState(state)

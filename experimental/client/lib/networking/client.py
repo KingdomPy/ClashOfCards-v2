@@ -101,8 +101,8 @@ class MyClient(basic.LineReceiver):
         elif opCode == "updateEntity":
             data = data[0]
             for update in data:
-                entityId, position = update
-                self.gameClient.gameState.tweenUpdate(entityId, position)
+                entityId, state = update
+                self.gameClient.gameState.updateState(entityId, state)
 
     def sendData(self, data):
         if self.connected:

@@ -1,4 +1,4 @@
-import math, random
+import math
 import json
 from lib import filePath, contentLoader
 
@@ -14,64 +14,54 @@ for ability in ABILITIES:
     pass
     #print(ability)
 
-def distanceLinePoint(line, point, range):
-    x0 = point[0]
-    y0 = point[1]
-    x1 = line[0][0]
-    y1 = line[0][1]
-    x2 = line[1][0]
-    y2 = line[1][1]
-    #Check if point is within rectangle surrounding bordering the line
-    if x0 >= min(x1,x2) and x0 <= max(x1,x2) and y0 >= min(y1,y2) and y0 <= max(y1,y2):
-        distance = abs((y2-y1)*x0-(x2-x1)*y0+x2*y1-y2*x1)/math.sqrt((y2-y1)**2+(x2-x1)**2)
-        return distance <= 4+range #The constant, 4, is the leiniency of the hitbox, range is the size of the bullet
+def pointToPoint(xDif, yDif, angle):
+    if yDif < 0:
+        return  math.pi/2 - math.atan(xDif/yDif) 
+    else:
+        if yDif != 0:
+            return - math.pi/2 - math.atan(xDif/yDif)
+        else:
+            return angle #returned when angle can not be calculated
+
+        #(-1*yDif/abs(yDif)) = math.atan(xDif/yDif) One line equation
 
 class entity:
     def __init__(self, tag, stats, position=(0,0,0), size=30):
+        # Position & Rendering
         self.tag = tag
         self.stats = stats
         self.x = position[0]
         self.y = position[1]
         self.angle = position[2]
         self.visualAngle = self.angle
-        self.size = size
+
+        # Physics & Rendering
         self.type = self.stats["type"]
+        self.entityCategory = stats["directory"]
+        self.shape = ENTITIES[self.entityCategory][self.type][1]
+        self.sizes = ENTITIES[self.entityCategory][self.type][2]
+        self.sizeScale = 1
+        self.hasMoved = 0 # 0 = false, 1 = stopping, 2 = true
+
+        # Animations
         self.clock = 0
         self.currentAnimation = [""]
         self.iFrame = False # immunity frame
-        self.dodgeFrame = False # ignore collision frame
-        # How extensive bullet collision is
-        self.complexity = 10
+        self.canCollide = False # ignore collision
 
-        #Load Image
-        if stats["directory"] == 0 or stats["directory"] == 1:
-            image = ENTITIES[stats["directory"]][stats["type"]]
-            self.colour = image[0]
-            shape = image[1]
-            self.size = image[2]
-            self.outline = []
-            for angle in shape:
-                self.outline.append(math.pi*(angle)/180) # Convert to radians
-        else: # Temporary player image
-            self.colour = (0,0,0)
-            shape = (0,140,220)
-            self.size = 35
-            self.outline = []
-            for angle in shape:
-                self.outline.append(math.pi * (angle) / 180)  # Convert to radians
-
-        # Conditions (e.g. hp, mana, cooldowns, if it can be damage)
+        # (hp, mana, cooldowns, if it can be damage, e.t.c)
         self.loadStats()
+        self.detectionRange = 300
 
     def loadStats(self):
-        if self.stats["directory"] == 0: # Enemy entity
-            self.canBeHit = self.stats["canBeHit"]
+        if self.entityCategory == 0: # Enemy entity
+            #self.canBeHit = self.stats["canBeHit"]
             stats = ENTITIES[0][self.stats["type"]][3]
             self.maxHealth = stats[1]
             self.health = stats[1]
             self.movementSpeed = stats[0] # Metres per second
 
-        elif self.stats["directory"] == 1: # Bullet entity
+        elif self.entityCategory == 1: # Bullet entity
             self.movementSpeed = ENTITIES[1][self.stats["type"]][3] # Metres per second
 
         else: # Temporary data loading
@@ -81,28 +71,6 @@ class entity:
             self.health = 15
             self.maxEnergy = 10
             self.energy =10
-
-    def getBulletCollision(self, bullet, damage): # bullet = ((x,y),size), damage = the damage of the bullet
-        if self.canBeHit:
-            wasKilled = False # Assume the entity survives the collision
-            currentSize = self.size
-            linesToCheck = []
-            for i in range(self.complexity): # A higher complexity results in a more accurate collision detection
-                currentSize -= self.size/self.complexity
-                entityOutline = self.render()[0]
-                for line in entityOutline:
-                    linesToCheck.append(line)
-            limit = len(linesToCheck) # The size of the list
-            for i in range(len(linesToCheck)):
-                hasCollided = distanceLinePoint((linesToCheck[i],linesToCheck[(i+1)%limit]), (bullet[0]), bullet[1])
-                if hasCollided:
-                    self.hitProcedure(damage)
-                    if self.health <= 0:
-                        wasKilled = True
-                    return True, wasKilled
-            return False
-        else:
-            return False # Instruction to state that it can't be hit
 
     def hitProcedure(self, damage):
         self.health -= damage
@@ -114,6 +82,8 @@ class entity:
         else:
             self.x += distance*math.cos(self.angle)
             self.y += distance*math.sin(self.angle)
+            
+        self.hasMoved = 2
 
     def rotate(self, delta, direction, rotation=None):
         if rotation == None:
@@ -122,39 +92,52 @@ class entity:
             self.angle = rotation
         self.angle %= 2*math.pi
 
+        self.hasMoved = 2
+
     def visualRotate(self, delta, direction, rotation=None):
         if rotation == None:
             self.visualAngle += direction*math.pi*delta # Rotation speed of 180 per second
         else:
             self.visualAngle = rotation
         self.visualAngle %= 2*math.pi
+
+        self.hasMoved = 2
             
-    def update(self, delta, clockSignal):
+    def update(self, delta, clockSignal, playerObjects=[]):
         # Delta is the amount of time in seconds that has passed
         # since frame has refreshed, clockSignal is the time in milliseconds
-        
-        self.moveForward(delta)
-        self.moveForward(delta)
-        self.rotate(delta, 1)
-        self.visualAngle = self.angle
+
+        nearest_playerObject = (self.detectionRange+1, 0) #Distance, Center
+        myRect = self.getRect() #Bottom Left, Bottom Right, Top Right, Top Left
+        playerRect = 0 #Reserve for use later
+        for playerObject in playerObjects: #Player objects are players and their allies
+            #Me to Them
+            playerRect = playerObject.getRect()
+            xDistance = max(playerRect[0][0] - myRect[1][0], myRect[0][0] - playerRect[1][0])
+            yDistance = max(playerRect[1][1] - myRect[2][1], myRect[1][1] - playerRect[2][1])
+            distance = math.sqrt(xDistance**2 + yDistance**2)
+            if distance < nearest_playerObject[0]:
+                nearest_playerObject = (distance, playerObject.getPosition())
+
+        if nearest_playerObject[0] <= self.detectionRange:
+            center1 = self.getPosition()
+            center2 = nearest_playerObject[1]
+            self.visualRotate(0, 0, pointToPoint(center1[0] - center2[0], center1[1] - center2[1], self.visualAngle))
+        else:
+            self.moveForward(delta)
+            self.moveForward(delta)
+            self.rotate(delta, 1)
+            self.visualAngle = self.angle
         
         self.clock += clockSignal
         self.clock %= 10000 #Reset every 10 seconds
 
-    def render(self):
-        display = []
-        for point in self.outline:
-            newPoint = point+self.visualAngle #Rotate the points to the current direction
-            imageX,imageY = math.cos(newPoint),math.sin(newPoint) #Convert points to coordinates
-            display.append([self.size*imageX,self.size*imageY]) #Stretch the image
-        return display,self.colour,self.tag #Return the drawn entity, its colour and its tag
+        if self.hasMoved > 0:
+            self.hasMoved -= 1
 
     def setLocation(self, position, angle):
         self.x,self.y = position
         self.angle = angle
-
-    def getDomain(self): #Area the entity is contained
-        return (self.x,self.y),self.size
 
     def getVisualAngle(self):
         return self.visualAngle
@@ -162,14 +145,68 @@ class entity:
     def getTag(self):
         return self.tag
 
+    def getPosition(self):
+        return self.x, self.y
+
     def getRender(self):
-        return self.type, self.x, self.y
+        return self.type, self.x, self.y, math.degrees(self.visualAngle)
+
+    def getRect(self):
+        sizeIndex = 0
+        rectX = [None, None]
+        rectY = [None, None]
+        for point in self.shape:
+            direction = math.radians(point) + self.visualAngle
+            x = self.x+self.sizes[sizeIndex]*math.cos(direction)
+            y = self.y+self.sizes[sizeIndex]*math.sin(direction)
+            if rectX[0] == None or x < rectX[0]:
+                rectX[0] = x
+            if rectX[1] == None or x > rectX[1]:
+                rectX[1] = x
+                
+            if rectY[0] == None or y < rectY[0]: 
+                rectY[0] = y
+            if rectY[1] == None or y > rectY[1]:
+                rectY[1] = y
+                
+            if sizeIndex < len(self.sizes)-1:
+                sizeIndex += 1
+        #Create the rectangle
+        rectangle = ((rectX[0], rectY[0]),(rectX[1], rectY[0]),(rectX[1], rectY[1]),(rectX[0], rectY[1]))
+        return rectangle
+
+    def getShape(self):
+        pointsToDraw = []
+        sizeIndex = 0
+        for point in self.shape:
+            direction = math.radians(point) + self.visualAngle
+            x = self.x+self.sizes[sizeIndex]*math.cos(direction)
+            y = self.y+self.sizes[sizeIndex]*math.sin(direction)
+            pointsToDraw.append((x,y))
+            if sizeIndex < len(self.sizes)-1:
+                sizeIndex += 1
+        return pointsToDraw
+
+    def collisionShift(self, pushValue):
+        self.x += pushValue[0]
+        self.y += pushValue[1]
+
+    def getHasMoved(self):
+        if self.hasMoved > 0:
+            return True
+        return False
+    
+    def getBulletSpawn(self):
+        return self.x, self.y, self.angle
     
 class player(entity):
 
     def __init__(self, tag, stats, position=(0,0,0), size=30):
         super().__init__(tag, stats, position, size)
-        self.address = self.stats["address"]
+        try:
+            self.address = self.stats["address"]
+        except:
+            pass
         self.items = []  # Weapons, potions e.t.c
         self.learntAbilities = [] # Moves that have been learnt/unlocked
         self.passives = [] # A list of equipped abilities or effects that trigger automatically (timePassed, name)
@@ -219,13 +256,16 @@ class player(entity):
                 self.abilities[slot-1] = (name,ability[3]) # Name, (ability scalings and cooldown)
                 self.cooldowns[slot] = [ability[3][2]*1000, ability[3][2]*1000] # Reset the cooldown
 
-    def update(self, delta, clockSignal):
+    def update(self, delta, clockSignal, playerObjects=[]):
 
         self.visualAngle = self.angle
 
         for ability in self.cooldowns: # Increment the cooldown timers
             if ability[0] < ability[1]:
                 ability[0] += clockSignal
+
+        if self.hasMoved > 0:
+            self.hasMoved -= 1
 
     def setCommandOptions(self, options):
         self.commandOptions = options
@@ -242,16 +282,21 @@ class projectile(entity):
         super().__init__(tag, stats, position, size)
         self.duration = [0,4000] # Current time, Maximum time alive
         self.damage = 10
+        self.inMotion = True # Has not collided
 
     def hasHit(self):
-        return 0
+        self.inMotion = False
+        return 1 # Should be destroyed upon being hit
 
-    def update(self, delta, clockSignal):
-        self.moveForward(delta)
-        self.visualRotate(delta, 1)
+    def update(self, delta, clockSignal, playerObjects=[]):
         self.duration[0] += clockSignal
-        if self.duration[0] >= self.duration[1]:
+        if self.duration[0] >= self.duration[1] or not(self.inMotion):
             return 0 # Instruction to the engine to delete the projectile
+        self.moveForward(delta)
+        if self.type == "Surge":
+            self.visualRotate(delta, 1)
+        elif self.type == "Hyper":
+            self.visualRotate(delta, 1)
 
     def getDamage(self):
         return self.damage

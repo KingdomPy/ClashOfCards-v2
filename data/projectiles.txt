@@ -1,0 +1,6 @@
+"Surge":[[0,0,0],[0,90,180,270], [14], 600]
+"Spray":[[0,0,0],[0,90,180,270], [16], 400]
+"Hyper":[[0,0,0],[0,90,180,270], [8], 600]
+"Missile":[[0,0,0],[0,90,180,270], [24], 800]
+#Name: Colour, Shape, Sizes, Speed
+#All speed has been scaled up 50 times

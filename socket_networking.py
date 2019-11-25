@@ -175,7 +175,7 @@ class engine:
         #self.hudMap containts pre calculated positions: level bar, minimap
         
         #BLIT HUD TEMPLATE
-        #self.canvas.blit(self.hud, (0,0))
+        self.canvas.blit(self.hud, (0,0))
         #DRAW ABILITY BOX
         pygame.draw.rect(self.canvas, *self.abilityBox)
         #DRAW ABILITY ICONS
@@ -370,6 +370,7 @@ class engine:
             self.renderHud()
             pygame.display.flip() #Update the screen
             deltaTime = pygame.time.get_ticks() - startTime
+            print(deltaTime)
             
             for i in range(len(self.animations)):
                 self.animations[i][2] += max(self.ticksCalculation, deltaTime)

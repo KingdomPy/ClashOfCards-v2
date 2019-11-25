@@ -70,10 +70,10 @@ class entityList:
     def getEntities(self):
         return self.entities
 
-    def addEntity(self, entityName, entityClass, position=(0,0,0)):
+    def addEntity(self, entityName, entityClass, position=(0,0)):
         entityId = len(self.entities)
-        newEntity = gameObjects.entity(entityId, position)
-        newEntity.setType(entityName, entityClass)
+        newEntity = gameObjects.entity(entityId, entityName, entityClass)
+        newEntity.setPosition(position)
         self.entities[entityId] = newEntity
         return entityId
 
@@ -82,9 +82,6 @@ class entityList:
 
     def getEntity(self, entityId):
         return self.entities[entityId]
-
-    def updatePosition(self, entityId, position):
-        self.entities[entityId].updatePosition(position)
 
 connectedUsers = {}
 currentEntities = entityList()
@@ -109,8 +106,8 @@ class MyServer(basic.LineReceiver):
             entities = currentEntities.getEntities()
             for entityId in entities:
                 entity = entities[entityId]
-                name, entityClass = entity.name, entity.entityClass
-                packet = (opCodes["addEntity"], entityId, entity.getPosition(), name, entityCodes[entityClass])
+                entityName, entityType = entity.entityName, entity.entityType
+                packet = (opCodes["addEntity"], entityId, entity.getPositionAngle(), entityName, entityCodes[entityType])
                 packet = json.dumps(packet)
                 packet = packet.encode()
                 self.sendLine(packet)
@@ -122,7 +119,7 @@ class MyServer(basic.LineReceiver):
             entityId = currentEntities.addEntity(userName, userClass)
             connectedUsers[self]["entityId"] = entityId
             connectedUsers[self]["playing"] = True
-            packet = (opCodes["addEntity"], entityId, (0,0,0), userName, entityCodes[userClass])
+            packet = (opCodes["addEntity"], entityId, (0, 0, 0, 0), userName, entityCodes[userClass])
             packet = json.dumps(packet)
             packet = packet.encode()   
             for client in connectedUsers: #Send new player to all online players
@@ -135,14 +132,7 @@ class MyServer(basic.LineReceiver):
                 userId = connectedUsers[self]["entityId"]            
                 entity = currentEntities.getEntity(userId)
                 for userInput in data:
-                    if userInput == "upKey":
-                        entity.moveForward(dt)
-                    elif userInput == "downKey":
-                        entity.fillerInput()
-                    elif userInput == "rightKey":
-                        entity.rotate(dt, 1)
-                    elif userInput == "leftKey":
-                        entity.rotate(dt, -1)
+                    entity.addInput(userInput)
                 connectedUsers[self]["hasInput"] = True
 
     def sendData(self, data):
@@ -172,7 +162,7 @@ def updateEntities():
     updatesToSend = []
     entities = currentEntities.getEntities()
     for entityId in entities:
-        update = entities[entityId].getUpdate()
+        update = entities[entityId].update(dt)
         if update != 0:
             updatesToSend.append((entityId, update))
     if len(updatesToSend) > 0:
@@ -182,7 +172,6 @@ def updateEntities():
         for client in connectedUsers:
             if connectedUsers[client]["playing"]:
                 client.sendLine(packet)
-                print(connectedUsers[client]["hasInput"])
                 connectedUsers[client]["hasInput"] = False
     reactor.callLater(1/ticksPerSecond, updateEntities)
 
