@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Soldiers Of Christ</title>
+	<link rel="icon" href="/assets/favicon.png" type="png">
+	<link rel="stylesheet" type="text/css" href="/assets/style.css">
+	<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans"/>
+	<script src="/assets/js/pixi.js"></script>
+	<script type="text/javascript" src="/assets/js/jquery-3.4.1.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+</head>
+<body>
+	<div id="home" style="display: show;">
+		<form id="login-form" action="/">
+			<div id="form-content">
+				Username:<br><input id="uname" type="text" name="username" minlength="3" maxlength="26" required></input><br>
+				Password:<br><input id="passw" type="password" name="password" minlength="6" maxlength="26" required></input><br>
+				Email: (sign up)<br><input id="email" type="email" name="email" maxlength="52"></input><br>
+				<button type="submit" id="sign-in" class="form-button" onclick="submitForm('/login')">PLAY</button><br>
+				<button type="submit" id="sign-up" class="form-button" onclick="submitForm('/signup')">Sign Up</button>
+			</div>
+		</form> 
+	</div>
+
+	<div id="app" style="display: none;">
+		<div id="chat-box">
+			<ul id="chat-messages"></ul>
+		</div>
+		<div id="message-box">
+			<input id="message-entry" type="text"></input>
+			<button id="message-submit">Send</button>
+		</div>
+		<script src="/assets/js/app.js" type="module"></script>
+	</div>
+
+	<script type="text/javascript">
+		function submitForm(url) {
+			if (isValid(url)) {
+			    var http = new XMLHttpRequest();
+			    http.open("POST", url, true);
+			    http.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+			    var params = "username=" + document.getElementById("uname").value+"&"+"password=" + document.getElementById("passw").value+"&"+"email=" + document.getElementById("email").value; // probably use document.getElementById(...).value
+			    http.send(params);
+			    clearForm();
+			    http.onload = function() {
+			       var response = JSON.parse(http.responseText);
+			       if (response.status == 1) {
+			       		alert("Account created");
+			       		if (response.status == 1) {
+			       			window.location.href = "/";
+			       		}
+			       } else{
+			       		alert(response.errors);
+			       }
+			    }
+			}
+		}
+
+		function isValid(url) {
+			var username = document.getElementById("uname").value;
+		    var password = document.getElementById("passw").value;
+		    var email = document.getElementById("email").value;	
+
+		    if ((username.length < 3 || username.length > 26) && !username.includes(" ")) {
+			    return false;
+		    }
+
+		    if ((password.length < 6 || password.length > 26) && !password.includes(" ")) {
+			    return false;
+		    }
+
+		    if (url == "/signup") {
+			    if ((email == "" || email == null) && !email.includes("@") && email.length < 52) {
+				    return false;
+			    }
+			}
+
+		    return true;
+		}
+
+		function clearForm() {
+			document.getElementById("uname").value = "";
+			document.getElementById("passw").value = "";
+			document.getElementById("email").value = "";
+		}
+	</script>
+
+</body>
+</html>

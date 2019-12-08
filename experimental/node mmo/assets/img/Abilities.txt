@@ -1,0 +1,55 @@
+x = undecided meters
+
+Knuckles:
+Ab1: Punch in your direction, pushing bullets back and stunning them for 3 seconds.
+Ab2: Glide in a set direction for 2 seconds while becoming immune to damage. Hitting a downed ally will pick them up and carry them with you until
+you land. You are immune for 0.5 seconds after landing.
+
+Knight:
+Ab1: Gain a shield that deflects up to 5 bullets for 5 seconds.
+Ab2: Launch light in your direction that travels x amount. Allies hit receive a shield that deflects 1 attack for 3 seconds.
+
+Portal:
+Ab1: Throw a ball that travels x over 2 seconds. You can reactivate the ability early to teleport you and any nearby allies to it.
+The higher your speed the faster the ball goes.
+Ab2: After going down suck in all nearby enemies for 1 seconds then you come back alive at x forward. Refresh every 150 pellets
+
+Unknown:
+Ab1: Toggle. Enemies infront of you are slowed down.
+Ab2: Gain a speed boost and scare enemies in front of you away.
+
+Beast:
+Ab1: Toggle. Stop moving and become immune to damage, while charging up your speed. Gain
+speed boost for 3 seconds after moving.
+Ab2: Shoot out x spikes behind you that bounce and break upon the first enemy hit, can bounce only once.
+Enemies hit are are slowed by 70% for 3 seconds. Gain a spike every 15 pellets up to a maximum of 15 spikes.
+
+1 Block = 1 metre
+
+Knuckles
+Ab1: Punch | COST 40 CD 26/22/18/14/10
+Punch in a 140 cone in your horizontal direction. Enemies hit are knocked backed and stunned for 1/1.5/2/2.5/3 seconds.
+The range is 2/2.2/2.4/2.6/3 metres. 
+
+Ab2: Glide | COST 50 CD 50/45/40/35/30
+Glide at a speed of 5/6/7/8/9 metres per second for 1.2/1.4/1.6/1.8/2 seconds. While gliding you are unable to change your direction and are immune 
+to damage and any allies you rescue are carried with you until you land. After landing become immune to damage for 0.5 seconds and can not punch.
+
+Knight:
+Ab1: Protection |COST 25 CD 50/45/40/35/30
+For 5 seconds move 30% slower and gain a shield that deflects up to 1/2/3/4/5 attacks. The cooldown begins after the shield expires.
+The range of the shield is 1/1.4/1.8/2.2/2.6 metre.
+
+Ab2: Blessing | COST 50 CD 50/45/40/35/30
+Launch light in your direction that travels 10/13/16/19/22 metres and bless allies hit for 3 seconds.
+The blessing grants 15% movement speed and allows the ally to deflect 1 attack. Blessings can not stack. You can not
+be benefitted by blessing while under protection. Shield range is 1 metre.
+
+Portal: 
+Ab1: Wormhole | COST 30 CD 30/28/26/24/22
+Launch a ball that travels 3 + 40% of your speed for 2 seconds. After reactivating your ability or after 2 seconds has elapsed you and
+any nearby allies withing 0.5 metres are teleported to the ball.
+
+Ab2: Second Chance | COST 150 pellets CD 0
+After being downed suck in all nearby enemies within 3 metres, the closer the enemy the faster it is pulled in. After 1 second
+rewind time and teleport 4 metres in your current direction.

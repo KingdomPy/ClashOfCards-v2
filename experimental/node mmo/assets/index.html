@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Node MMO</title>
+	<link rel="icon" href="/assets/favicon.png" type="png">
+	<link rel="stylesheet" type="text/css" href="/assets/style.css">
+	<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans"/>
+	<script src="/assets/js/pixi.js"></script>
+	<script type="text/javascript" src="/assets/js/jquery-3.4.1.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+</head>
+<body>
+	<div id="home" style="display: show;">
+		<h1>Select a character:</h1>
+		<div id="selected-character" style="display: none;"></div>
+		<div id="character-list">
+			<div class="character-choice">
+				<h1>Player</h1>
+				<img src="/assets/img/player.png">
+			</div>
+			<div class="character-choice" style="--theme: rgb(70,150,150);">
+				<h1>Unknown</h1>
+				<img src="/assets/img/unknown.png">
+			</div>
+			<div class="character-choice" style="--theme: #42311c;">
+				<h1>Beast</h1>
+				<img src="/assets/img/beast.png">
+			</div>
+			<div class="character-choice" style="--theme: #da1b1b;">
+				<h1>Knuckles</h1>
+				<img src="/assets/img/knuckles.png">
+			</div>
+			<div class="character-choice" style="--theme: #21b37e">
+				<h1>Portal</h1>
+				<img src="/assets/img/portal.png">
+			</div>
+			<div class="character-choice" style="--theme: #cba611; background-color: #7a721a;">
+				<h1>Knight</h1>
+				<img src="/assets/img/knight.png">
+			</div>
+			<div class="character-choice">
+				<h1>Player</h1>
+				<img src="/assets/img/player.png">
+			</div>
+
+		</div>
+	</div>
+
+	<div id="app" style="display: none;">
+		<div id="chat-box">
+			<ul id="chat-messages"></ul>
+		</div>
+		<div id="message-box">
+			<input id="message-entry" type="text"></input>
+			<button id="message-submit">Send</button>
+		</div>
+		<script src="/assets/js/app.js" type="module"></script>
+	</div>
+
+	<script type="text/javascript">
+		function submitForm(url) {
+			if (isValid(url)) {
+			    var http = new XMLHttpRequest();
+			    http.open("POST", url, true);
+			    http.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+			    var params = "username=" + document.getElementById("uname").value+"&"+"password=" + document.getElementById("passw").value+"&"+"email=" + document.getElementById("email").value; // probably use document.getElementById(...).value
+			    http.send(params);
+			    clearForm();
+			    http.onload = function() {
+			       var response = JSON.parse(http.responseText);
+			       if (response.status == 1) {
+			       		alert("Account created");
+			       		if (response.status == 1) {
+			       			window.location.href = "/";
+			       		}
+			       } else{
+			       		alert(response.errors);
+			       }
+			    }
+			}
+		}
+
+		function isValid(url) {
+			var username = document.getElementById("uname").value;
+		    var password = document.getElementById("passw").value;
+		    var email = document.getElementById("email").value;	
+
+		    if ((username.length < 3 || username.length > 26) && !username.includes(" ")) {
+			    return false;
+		    }
+
+		    if ((password.length < 6 || password.length > 26) && !password.includes(" ")) {
+			    return false;
+		    }
+
+		    if (url == "/signup") {
+			    if ((email == "" || email == null) && !email.includes("@") && email.length < 52) {
+				    return false;
+			    }
+			}
+
+		    return true;
+		}
+
+		function clearForm() {
+			document.getElementById("uname").value = "";
+			document.getElementById("passw").value = "";
+			document.getElementById("email").value = "";
+		}
+
+		$(".character-choice").on('click', function(event){
+		    event.stopPropagation();
+		    event.stopImmediatePropagation();
+		    //(... rest of your JS code)
+		   var name = (event.currentTarget.innerText).toLowerCase();
+		   document.getElementById("selected-character").innerHTML = name;
+		});
+	</script>
+</body>
+</html>
